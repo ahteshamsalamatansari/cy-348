@@ -1,0 +1,12 @@
+# Carrier Browser Automation - Requirements
+# Install with: pip install -r requirements.txt
+
+playwright==1.57.0
+flask==3.0.0
+flask-cors==4.0.0
+
+
+pandas
+transformers[torch]
+scikit-learn
+requests

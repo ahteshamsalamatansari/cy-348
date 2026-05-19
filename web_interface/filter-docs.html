@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relay On Demand - Smart Filter Documentation</title>
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&family=Montserrat:wght@500;600;700&display=swap" rel="stylesheet">
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        :root{
+            --relay-primary:#0171bb;--relay-primary-dark:#005186;
+            --relay-surface:#f5f6fa;--relay-card:#fff;--relay-text:#333;
+            --relay-muted:#6c757d;--relay-border:#ced4da;
+            --relay-gradient:linear-gradient(180deg,#0171bb,#005186);
+        }
+        body{font-family:'Lato',sans-serif;background:var(--relay-surface);color:var(--relay-text);line-height:1.6}
+        .top-bar{background:var(--relay-gradient);color:#fff;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+        .top-bar h1{font-family:'Montserrat',sans-serif;font-size:20px;font-weight:600}
+        .top-bar span{font-size:12px;opacity:.7}
+        .back-btn{padding:6px 16px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:4px;cursor:pointer;font-size:12px;font-weight:400;text-decoration:none}
+        .back-btn:hover{background:rgba(255,255,255,.25)}
+        .container{max-width:960px;margin:0 auto;padding:24px}
+        .intro{background:var(--relay-card);border:1px solid var(--relay-border);border-radius:4px;padding:20px;margin-bottom:20px}
+        .intro h2{font-family:'Montserrat',sans-serif;font-size:18px;font-weight:600;margin-bottom:8px;color:var(--relay-primary)}
+        .intro p{font-size:14px;color:var(--relay-muted)}
+        details{background:var(--relay-card);border:1px solid var(--relay-border);border-radius:4px;margin-bottom:8px}
+        summary{font-family:'Montserrat',sans-serif;padding:12px 16px;cursor:pointer;font-weight:600;font-size:14px;color:var(--relay-primary-dark);list-style:none;display:flex;justify-content:space-between;align-items:center;user-select:none}
+        summary::-webkit-details-marker{display:none}
+        summary::after{content:'\25B6';font-size:10px;transition:transform .2s;color:var(--relay-muted)}
+        details[open] summary::after{transform:rotate(90deg)}
+        summary:hover{background:#f8f9fa}
+        .section-body{padding:16px;border-top:1px solid var(--relay-border);font-size:13px}
+        .section-body h3{font-family:'Montserrat',sans-serif;font-size:14px;font-weight:600;margin:16px 0 8px;color:var(--relay-primary)}
+        .section-body h3:first-child{margin-top:0}
+        .section-body p{margin:6px 0}
+        .section-body ul,.section-body ol{margin:6px 0 6px 20px}
+        .section-body li{margin:3px 0}
+        table{width:100%;border-collapse:collapse;margin:10px 0;font-size:12px}
+        th{background:#f8f9fa;text-align:left;padding:8px 10px;border:1px solid var(--relay-border);font-weight:700;font-family:'Montserrat',sans-serif;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--relay-muted)}
+        td{padding:6px 10px;border:1px solid var(--relay-border);vertical-align:top}
+        .code{background:#f8f9fa;border:1px solid var(--relay-border);border-radius:4px;padding:10px 14px;font-family:'Courier New',monospace;font-size:12px;white-space:pre-wrap;overflow-x:auto;margin:8px 0;line-height:1.5}
+        .method{font-family:'Courier New',monospace;font-weight:700;font-size:11px;padding:2px 6px;border-radius:3px;display:inline-block}
+        .method.get{background:#d4edda;color:#155724}
+        .method.post{background:#cce5ff;color:#004085}
+        .note{background:#fff3cd;border-left:3px solid #ffc107;padding:10px 14px;border-radius:4px;margin:10px 0;font-size:12px;color:#856404}
+        .arch-diagram{background:#0f172a;color:#e2e8f0;padding:16px;border-radius:4px;font-family:'Courier New',monospace;font-size:12px;line-height:1.8;margin:10px 0;overflow-x:auto}
+        a{color:var(--relay-primary)}
+        @media(max-width:640px){.container{padding:12px}}
+    </style>
+</head>
+<body>
+
+<div class="top-bar">
+    <div>
+        <h1>Smart Filter Documentation</h1>
+        <span>Context-aware contact information detection system</span>
+    </div>
+    <a href="/filter.html" class="back-btn">Back to Filter</a>
+</div>
+
+<div class="container">
+
+<div class="intro">
+    <h2>System Overview</h2>
+    <p>The Smart Filter is an AI-powered content analysis tool that detects obfuscated contact information (phone numbers, emails, social media handles) and circumvention attempts in user messages. The server automatically tracks the last 5 messages per <code>user_id</code> to detect information split across multiple messages — no client-side history management needed.</p>
+</div>
+
+<!-- 1. ARCHITECTURE -->
+<details open>
+<summary>1. Architecture</summary>
+<div class="section-body">
+<div class="arch-diagram">Client App / Browser
+  |
+  |  POST /api/filter  { message, user_id }
+  v
+chat_server.py (Port 9800)
+  |  Looks up user_id → retrieves last 5 messages
+  |  Builds system prompt + user history
+  |  Calls LM Studio API
+  v
+LM Studio (localhost:1234)
+  |  unsloth/qwen3.5-35b-a3b model
+  |  Analyzes NEW message + conversation history
+  v
+JSON Response: {safe, category, reason, user_id, context_size}
+  |
+  v  Server saves message to user's history</div>
+
+<h3>Key URLs</h3>
+<table>
+    <tr><th>URL</th><th>Purpose</th></tr>
+    <tr><td>https://ai.appsscale.com/filter.html</td><td>Public web interface</td></tr>
+    <tr><td>http://localhost:9800/filter.html</td><td>Local web interface</td></tr>
+    <tr><td>POST https://ai.appsscale.com/api/filter</td><td>Public API endpoint</td></tr>
+    <tr><td>GET https://ai.appsscale.com/api/filter/docs</td><td>API documentation (JSON)</td></tr>
+</table>
+</div>
+</details>
+
+<!-- 2. FILES -->
+<details>
+<summary>2. Files &amp; Locations</summary>
+<div class="section-body">
+<table>
+    <tr><th>File</th><th>Path</th><th>Purpose</th></tr>
+    <tr><td><code>filter.html</code></td><td>services/carrier-automation/</td><td>Frontend web interface (HTML/CSS/JS, ~420 lines)</td></tr>
+    <tr><td><code>chat_server.py</code></td><td>services/carrier-automation/</td><td>Backend: /api/filter endpoint + LLM integration (port 9800)</td></tr>
+    <tr><td><code>filter-docs.html</code></td><td>services/carrier-automation/</td><td>This documentation page</td></tr>
+</table>
+</div>
+</details>
+
+<!-- 3. API ENDPOINT -->
+<details>
+<summary>3. API Endpoint</summary>
+<div class="section-body">
+<h3><span class="method post">POST</span> /api/filter</h3>
+
+<h3>Request Body</h3>
+<div class="code">{
+  "message": "The message text to analyze",          // required
+  "user_id": "unique-user-identifier",               // recommended
+  "username": "display-name",                        // optional alias for user_id
+  "context": ["manual", "override", "messages"]      // optional (overrides auto-history)
+}</div>
+
+<h3>Request Fields</h3>
+<table>
+    <tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr>
+    <tr><td><code>message</code></td><td>string</td><td>Yes</td><td>The message text to analyze</td></tr>
+    <tr><td><code>user_id</code></td><td>string</td><td>Recommended</td><td>Unique user identifier. Enables per-user message history tracking on the server. If omitted, defaults to "anonymous" (shared history).</td></tr>
+    <tr><td><code>username</code></td><td>string</td><td>No</td><td>Alias for <code>user_id</code>. If <code>user_id</code> is not provided, <code>username</code> is used instead.</td></tr>
+    <tr><td><code>context</code></td><td>string[]</td><td>No</td><td>Manual context override. If provided, these messages are used instead of the server-side auto-tracked history. Use this if your app manages its own message history.</td></tr>
+</table>
+
+<h3>Response</h3>
+<div class="code">{
+  "safe": true | false,
+  "category": "CLEAN" | "PHONE" | "EMAIL" | "SOCIAL" | "CIRCUMVENTION",
+  "reason": "Explanation of why this was flagged or marked clean",
+  "user_id": "the-user-id-used",
+  "context_size": 3
+}</div>
+
+<h3>Response Fields</h3>
+<table>
+    <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+    <tr><td><code>safe</code></td><td>boolean</td><td><code>true</code> if no contact info detected, <code>false</code> if flagged</td></tr>
+    <tr><td><code>category</code></td><td>string</td><td>Detection category (see below)</td></tr>
+    <tr><td><code>reason</code></td><td>string</td><td>Human-readable explanation</td></tr>
+    <tr><td><code>user_id</code></td><td>string</td><td>The user_id that was used for this analysis</td></tr>
+    <tr><td><code>context_size</code></td><td>integer</td><td>Number of previous messages included as context (0-5)</td></tr>
+</table>
+
+<h3>Per-User History Tracking</h3>
+<div class="note">
+    <strong>Server-side history:</strong> The server automatically tracks the last 5 messages per <code>user_id</code>.
+    No client-side history management needed — just send <code>user_id</code> + <code>message</code> with each call.<br><br>
+    <strong>How it works:</strong><br>
+    • Each message is saved to the user's history AFTER analysis<br>
+    • The next call with the same <code>user_id</code> includes previous messages as context<br>
+    • Sessions auto-expire after 30 minutes of inactivity<br>
+    • Different <code>user_id</code> values have completely isolated histories<br>
+    • Maximum 5 messages retained per user (sliding window)
+</div>
+
+<h3>HTTP Status Codes</h3>
+<table>
+    <tr><th>Code</th><th>Meaning</th></tr>
+    <tr><td>200</td><td>Analysis complete (check <code>safe</code> field)</td></tr>
+    <tr><td>400</td><td>Missing or empty <code>message</code> field</td></tr>
+    <tr><td>500</td><td>LLM or server error</td></tr>
+    <tr><td>502</td><td>LM Studio unreachable</td></tr>
+</table>
+
+<h3><span class="method get">GET</span> /api/filter/health</h3>
+<p>Quick health check for the filter API. Returns LM Studio connectivity status without making an LLM call.</p>
+
+<h3><span class="method get">GET</span> /filter-docs</h3>
+<p>This documentation page.</p>
+</div>
+</details>
+
+<!-- 4. DETECTION CATEGORIES -->
+<details>
+<summary>4. Detection Categories</summary>
+<div class="section-body">
+<table>
+    <tr><th>Category</th><th>Description</th><th>Examples</th></tr>
+    <tr><td><code>CLEAN</code></td><td>No contact information detected</td><td>"The box weighs 50kg", "Ship it tomorrow"</td></tr>
+    <tr><td><code>PHONE</code></td><td>Phone number detected (including obfuscated)</td><td>"five-O-five 867 5309", "call me at 5.0.5.8.6.7.5.3.0.9"</td></tr>
+    <tr><td><code>EMAIL</code></td><td>Email address detected (including obfuscated)</td><td>"john [at] gmail [dot] com", "email me at j-o-h-n at gmail"</td></tr>
+    <tr><td><code>SOCIAL</code></td><td>Social media handle detected</td><td>"find me on insta @john", "my snap is john123"</td></tr>
+    <tr><td><code>CIRCUMVENTION</code></td><td>Attempt to move conversation off-platform</td><td>"let's talk privately", "contact me outside this app"</td></tr>
+</table>
+
+<div class="note"><strong>Split Detection:</strong> The server tracks per-user message history to detect information split across multiple messages. For example:<br>
+• Message 1 (user_id: "driver-123"): "My number starts with five five five" → PHONE<br>
+• Message 2 (user_id: "driver-123"): "and ends with one two three four" → PHONE (split detected: 555 + 1234)<br>
+• Message 2 (user_id: "driver-456"): "and ends with one two three four" → CLEAN (different user, no context)<br><br>
+No client-side history needed — the server handles it automatically via <code>user_id</code>.</div>
+</div>
+</details>
+
+<!-- 5. CONTEXT WINDOW -->
+<details>
+<summary>5. Context Window System</summary>
+<div class="section-body">
+<p>The filter maintains a <strong>5-message sliding window</strong> (configurable via <code>CONTEXT_WINDOW_SIZE</code>). Each new message is analyzed with up to 5 previous messages as context, allowing the AI to detect split information.</p>
+
+<h3>How It Works</h3>
+<ol>
+    <li>Frontend stores all messages in <code>chatHistory[]</code> array</li>
+    <li>On each analysis, the last 5 messages are sent as <code>context</code></li>
+    <li>The LLM system prompt instructs: "Consider ALL messages together. A phone number may be split across lines."</li>
+    <li>The LLM returns its analysis considering the full context</li>
+</ol>
+
+<h3>Server-Side System Prompt (in chat_server.py)</h3>
+<p>The system prompt instructs the LLM to:</p>
+<ul>
+    <li>Detect phone numbers, emails, social media handles, circumvention attempts</li>
+    <li>Consider messages split across multiple lines</li>
+    <li>Detect obfuscation (spelled out numbers, symbols replacing characters)</li>
+    <li>Return JSON with exactly 3 fields: <code>safe</code>, <code>category</code>, <code>reason</code></li>
+    <li>Categories: CLEAN, PHONE, EMAIL, SOCIAL, CIRCUMVENTION</li>
+</ul>
+</div>
+</details>
+
+<!-- 6. FRONTEND JS -->
+<details>
+<summary>6. Frontend JavaScript Reference</summary>
+<div class="section-body">
+<h3>Global Variables</h3>
+<table>
+    <tr><th>Variable</th><th>Type</th><th>Purpose</th></tr>
+    <tr><td><code>chatHistory</code></td><td>Array</td><td>Stores {role, content} message objects for context</td></tr>
+    <tr><td><code>isConnected</code></td><td>Boolean</td><td>API connection status</td></tr>
+    <tr><td><code>CONTEXT_WINDOW_SIZE</code></td><td>Number (5)</td><td>How many previous messages the AI sees</td></tr>
+    <tr><td><code>tests</code></td><td>Object</td><td>Pre-canned test messages (clean, phone, email)</td></tr>
+</table>
+
+<h3>Functions</h3>
+<table>
+    <tr><th>Function</th><th>Description</th></tr>
+    <tr><td><code>testConnection()</code></td><td>Tests connectivity by POSTing a test message to /api/filter</td></tr>
+    <tr><td><code>sendMessage()</code></td><td>Analyzes user message: sends to /api/filter with context, renders result</td></tr>
+    <tr><td><code>runSequenceTest()</code></td><td>Automated 3-message split phone number test (red team test)</td></tr>
+    <tr><td><code>renderMessage(role, text)</code></td><td>Adds message bubble to chat</td></tr>
+    <tr><td><code>renderAnalysis(analysis)</code></td><td>Renders detection badge (CLEAN/PHONE/EMAIL/etc) with reason</td></tr>
+    <tr><td><code>clearChat()</code></td><td>Wipes chatHistory and clears UI</td></tr>
+    <tr><td><code>fillTest(type)</code></td><td>Pre-fills textarea with canned test message</td></tr>
+    <tr><td><code>escapeHtml(text)</code></td><td>HTML entity escaping</td></tr>
+    <tr><td><code>toggleApiDocs()</code></td><td>Shows/hides API documentation panel</td></tr>
+</table>
+
+<h3>DOM Element IDs</h3>
+<table>
+    <tr><th>ID</th><th>Purpose</th></tr>
+    <tr><td><code>connectionStatus</code></td><td>Connection status bar (connected/disconnected/testing)</td></tr>
+    <tr><td><code>connectionText</code></td><td>Connection status text label</td></tr>
+    <tr><td><code>messages</code></td><td>Chat messages container</td></tr>
+    <tr><td><code>loading</code></td><td>Loading overlay ("Analyzing Content...")</td></tr>
+    <tr><td><code>userInput</code></td><td>Textarea for message input</td></tr>
+    <tr><td><code>sendBtn</code></td><td>Send/analyze button</td></tr>
+    <tr><td><code>apiDocs</code></td><td>API documentation panel (hidden by default)</td></tr>
+</table>
+
+<h3>Test Chips</h3>
+<table>
+    <tr><th>Label</th><th>Test Message</th></tr>
+    <tr><td>Clean Message</td><td>"The dimensions of the box are 50x50 and it weighs 12kg. Can you ship it?"</td></tr>
+    <tr><td>Obfuscated Phone</td><td>"My number is five-O-five, then 867, and finally 5309. Call me."</td></tr>
+    <tr><td>Hidden Email</td><td>"Shoot me a message at john [at] gmail [dot] com"</td></tr>
+    <tr><td>Split Sequence Attack</td><td>3-message automated test: "I'd love to discuss this more off-platform." &rarr; "My number starts with five five five" &rarr; "and ends with one two three four."</td></tr>
+</table>
+</div>
+</details>
+
+<!-- 7. INTEGRATION EXAMPLES -->
+<details>
+<summary>7. Integration Examples</summary>
+<div class="section-body">
+
+<h3>cURL</h3>
+<div class="code">curl -X POST https://ai.appsscale.com/api/filter \
+  -H "Content-Type: application/json" \
+  -d '{"message": "Call me at five oh five 867 5309"}'</div>
+
+<h3>Python</h3>
+<div class="code">import requests
+
+response = requests.post(
+    "https://ai.appsscale.com/api/filter",
+    json={
+        "message": "My number is 5-0-5 then 867-5309",
+        "context": ["I want to discuss this privately"]
+    }
+)
+result = response.json()
+print(f"Safe: {result['safe']}, Category: {result['category']}")
+print(f"Reason: {result['reason']}")</div>
+
+<h3>JavaScript (fetch)</h3>
+<div class="code">const response = await fetch('https://ai.appsscale.com/api/filter', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+        message: 'Email me at john [at] gmail [dot] com',
+        context: []
+    })
+});
+const result = await response.json();
+console.log(`Safe: ${result.safe}, Category: ${result.category}`);</div>
+
+<h3>Batch Analysis (Python)</h3>
+<div class="code">import requests
+
+messages = [
+    "The box weighs 50kg",
+    "Call me at five oh five",
+    "My snap handle is @john123",
+]
+
+for msg in messages:
+    r = requests.post(
+        "https://ai.appsscale.com/api/filter",
+        json={"message": msg}
+    ).json()
+    status = "SAFE" if r["safe"] else "FLAGGED"
+    print(f"[{status}] {r['category']}: {msg[:50]}")</div>
+</div>
+</details>
+
+<!-- 8. CSS THEME -->
+<details>
+<summary>8. CSS Theme &amp; Design System</summary>
+<div class="section-body">
+<p>The Smart Filter uses the unified Relay On Demand design system:</p>
+<table>
+    <tr><th>Property</th><th>Value</th></tr>
+    <tr><td>Primary font</td><td><code>'Lato', sans-serif</code></td></tr>
+    <tr><td>Heading font</td><td><code>'Montserrat', sans-serif</code></td></tr>
+    <tr><td>Primary color</td><td><code>#0171bb</code></td></tr>
+    <tr><td>Button gradient</td><td><code>linear-gradient(180deg, #0171bb, #005186)</code></td></tr>
+    <tr><td>Border radius</td><td><code>4px</code> (all components)</td></tr>
+    <tr><td>Border color</td><td><code>#ced4da</code></td></tr>
+    <tr><td>Input focus glow</td><td><code>0 0 0 .2rem rgba(14,160,255,.25)</code></td></tr>
+    <tr><td>Surface background</td><td><code>#f5f6fa</code></td></tr>
+</table>
+
+<h3>Detection Badge Colors</h3>
+<table>
+    <tr><th>Status</th><th>Background</th><th>Text</th><th>Border</th></tr>
+    <tr><td>CLEAN</td><td><code>#d4edda</code></td><td><code>#155724</code></td><td><code>#c3e6cb</code></td></tr>
+    <tr><td>DETECTED</td><td><code>#f8d7da</code></td><td><code>#721c24</code></td><td><code>#f5c6cb</code></td></tr>
+    <tr><td>UNCERTAIN</td><td><code>#fff3cd</code></td><td><code>#856404</code></td><td><code>#ffeeba</code></td></tr>
+</table>
+</div>
+</details>
+
+</div><!-- container -->
+
+
+<!-- 9. SERVER MANAGEMENT & OPERATIONS -->
+<details>
+<summary>9. Server Management & Operations</summary>
+<div class="section-body">
+<h3>Server Information</h3>
+<table>
+    <tr><th>Property</th><th>Value</th></tr>
+    <tr><td>Server</td><td>5090 (Windows + WSL OracleLinux_9_5)</td></tr>
+    <tr><td>Project Root</td><td><code>C:\Users\appsf\Desktop\AppsForte</code> (Windows)<br/><code>/mnt/c/Users/appsf/Desktop/AppsForte</code> (WSL)</td></tr>
+    <tr><td>Service</td><td><code>carrier-chat.service</code> (port 9800)</td></tr>
+    <tr><td>Note</td><td>Smart Filter is an endpoint within chat_server.py, not a separate service</td></tr>
+</table>
+
+<h3>Systemd Commands</h3>
+<div class="code">systemctl status carrier-chat
+systemctl restart carrier-chat
+journalctl -u carrier-chat -f
+journalctl -u carrier-chat | grep filter</div>
+
+<h3>File Locations</h3>
+<table>
+    <tr><th>File</th><th>Path</th></tr>
+    <tr><td>Backend (filter endpoint)</td><td><code>/mnt/c/Users/appsf/Desktop/AppsForte/services/carrier-automation/chat_server.py</code></td></tr>
+    <tr><td>Frontend UI</td><td><code>/mnt/c/Users/appsf/Desktop/AppsForte/services/carrier-automation/filter.html</code></td></tr>
+    <tr><td>Documentation</td><td><code>/mnt/c/Users/appsf/Desktop/AppsForte/services/carrier-automation/filter-docs.html</code></td></tr>
+</table>
+
+<h3>Configuration</h3>
+<table>
+    <tr><th>Variable</th><th>Value</th><th>Location</th></tr>
+    <tr><td>LM_STUDIO_API</td><td>https://api.appsscale.com/v1/chat/completions</td><td>chat_server.py</td></tr>
+    <tr><td>MODEL_NAME</td><td>qwen3-coder-next-reap-40b-a3b</td><td>chat_server.py</td></tr>
+    <tr><td>CONTEXT_WINDOW_SIZE</td><td>5</td><td>filter.html (frontend)</td></tr>
+</table>
+
+<h3>Dependencies</h3>
+<p>Python 3, Flask, requests, LM Studio (qwen3-coder-next-reap-40b-a3b model)</p>
+
+<h3>Network</h3>
+<table>
+    <tr><th>Property</th><th>Value</th></tr>
+    <tr><td>Service Port</td><td>9800 (chat_server.py)</td></tr>
+    <tr><td>Filter Endpoint</td><td>POST /api/filter</td></tr>
+    <tr><td>Public URL</td><td>https://ai.appsscale.com/filter.html</td></tr>
+    <tr><td>API URL</td><td>https://ai.appsscale.com/api/filter</td></tr>
+</table>
+</div>
+</details>
+
+<!-- 10. TROUBLESHOOTING -->
+<details>
+<summary>10. Troubleshooting</summary>
+<div class="section-body">
+<h3>Filter Not Responding</h3>
+<div class="code"># Check carrier-chat service
+systemctl status carrier-chat
+
+# Test filter endpoint locally
+curl -X POST http://localhost:9800/api/filter \
+  -H "Content-Type: application/json" \
+  -d '{"message": "test"}'</div>
+
+<h3>False Positives/Negatives</h3>
+<p>The LLM model determines detection accuracy. To improve:</p>
+<ul>
+    <li>Update system prompt in chat_server.py (filter_message function)</li>
+    <li>Add examples to the prompt</li>
+    <li>Increase context window size in filter.html</li>
+    <li>Try different model (change MODEL_NAME)</li>
+</ul>
+
+<h3>LM Studio Connection Issues</h3>
+<div class="code"># Test LM Studio from WSL
+curl https://api.appsscale.com/v1/models</div>
+</div>
+</details>
+
+
+<!-- Password Gate -->
+<div id="authGate" style="position:fixed;inset:0;background:var(--relay-surface);z-index:9999;display:flex;align-items:center;justify-content:center">
+    <div style="background:var(--relay-card);border:1px solid var(--relay-border);border-radius:4px;padding:32px;max-width:380px;width:90%;text-align:center">
+        <div style="font-size:36px;margin-bottom:12px">&#128274;</div>
+        <h2 style="font-family:'Montserrat',sans-serif;font-size:18px;font-weight:600;margin-bottom:6px;color:var(--relay-primary)">Documentation Access</h2>
+        <p style="font-size:13px;color:var(--relay-muted);margin-bottom:20px">Enter the documentation password to continue.</p>
+        <input id="authPass" type="password" placeholder="Password" style="width:100%;padding:8px 12px;border:1px solid var(--relay-border);border-radius:4px;font-size:14px;font-family:'Lato',sans-serif;margin-bottom:12px" autofocus>
+        <div id="authError" style="color:#721c24;font-size:12px;margin-bottom:10px;display:none">Incorrect password. Please try again.</div>
+        <button id="authBtn" style="width:100%;padding:10px;background:linear-gradient(180deg,#0171bb,#005186);color:#fff;border:none;border-radius:4px;font-size:14px;cursor:pointer;font-family:'Lato',sans-serif">Unlock</button>
+    </div>
+</div>
+<script>
+(function(){
+    var KEY='relay_docs_auth';
+    if(sessionStorage.getItem(KEY)==='1'){
+        document.getElementById('authGate').style.display='none';
+        return;
+    }
+    var passEl=document.getElementById('authPass');
+    var errEl=document.getElementById('authError');
+    function check(){
+        if(passEl.value==='Bbcimlr!'){
+            sessionStorage.setItem(KEY,'1');
+            document.getElementById('authGate').style.display='none';
+        } else {
+            errEl.style.display='block';
+            passEl.value='';
+            passEl.focus();
+        }
+    }
+    document.getElementById('authBtn').addEventListener('click',check);
+    passEl.addEventListener('keydown',function(e){if(e.key==='Enter')check();});
+})();
+</script>
+</body>
+</html>

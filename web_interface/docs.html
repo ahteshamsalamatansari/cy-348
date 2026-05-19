@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relay On Demand - Carrier Dispatch AI Documentation</title>
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&family=Montserrat:wght@500;600;700&display=swap" rel="stylesheet">
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        :root{
+            --relay-primary:#0171bb;--relay-primary-dark:#005186;
+            --relay-surface:#f5f6fa;--relay-card:#fff;--relay-text:#333;
+            --relay-muted:#6c757d;--relay-border:#ced4da;
+            --relay-gradient:linear-gradient(180deg,#0171bb,#005186);
+        }
+        body{font-family:'Lato',sans-serif;background:var(--relay-surface);color:var(--relay-text);line-height:1.6}
+        .top-bar{background:var(--relay-gradient);color:#fff;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+        .top-bar h1{font-family:'Montserrat',sans-serif;font-size:20px;font-weight:600}
+        .top-bar span{font-size:12px;opacity:.7}
+        .back-btn{padding:6px 16px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:4px;cursor:pointer;font-size:12px;font-weight:400;text-decoration:none}
+        .back-btn:hover{background:rgba(255,255,255,.25)}
+        .container{max-width:960px;margin:0 auto;padding:24px}
+        .intro{background:var(--relay-card);border:1px solid var(--relay-border);border-radius:4px;padding:20px;margin-bottom:20px}
+        .intro h2{font-family:'Montserrat',sans-serif;font-size:18px;font-weight:600;margin-bottom:8px;color:var(--relay-primary)}
+        .intro p{font-size:14px;color:var(--relay-muted)}
+        details{background:var(--relay-card);border:1px solid var(--relay-border);border-radius:4px;margin-bottom:8px}
+        summary{font-family:'Montserrat',sans-serif;padding:12px 16px;cursor:pointer;font-weight:600;font-size:14px;color:var(--relay-primary-dark);list-style:none;display:flex;justify-content:space-between;align-items:center;user-select:none}
+        summary::-webkit-details-marker{display:none}
+        summary::after{content:'\25B6';font-size:10px;transition:transform .2s;color:var(--relay-muted)}
+        details[open] summary::after{transform:rotate(90deg)}
+        summary:hover{background:#f8f9fa}
+        .section-body{padding:16px;border-top:1px solid var(--relay-border);font-size:13px}
+        .section-body h3{font-family:'Montserrat',sans-serif;font-size:14px;font-weight:600;margin:16px 0 8px;color:var(--relay-primary)}
+        .section-body h3:first-child{margin-top:0}
+        .section-body p{margin:6px 0}
+        .section-body ul,.section-body ol{margin:6px 0 6px 20px}
+        .section-body li{margin:3px 0}
+        table{width:100%;border-collapse:collapse;margin:10px 0;font-size:12px}
+        th{background:#f8f9fa;text-align:left;padding:8px 10px;border:1px solid var(--relay-border);font-weight:700;font-family:'Montserrat',sans-serif;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--relay-muted)}
+        td{padding:6px 10px;border:1px solid var(--relay-border);vertical-align:top}
+        .code{background:#f8f9fa;border:1px solid var(--relay-border);border-radius:4px;padding:10px 14px;font-family:'Courier New',monospace;font-size:12px;white-space:pre-wrap;overflow-x:auto;margin:8px 0;line-height:1.5}
+        .method{font-family:'Courier New',monospace;font-weight:700;font-size:11px;padding:2px 6px;border-radius:3px;display:inline-block}
+        .method.get{background:#d4edda;color:#155724}
+        .method.post{background:#cce5ff;color:#004085}
+        .path{font-family:'Courier New',monospace;color:#333;font-size:12px}
+        .tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;margin:2px}
+        .tag.required{background:#f8d7da;color:#721c24}
+        .tag.optional{background:#d4edda;color:#155724}
+        .note{background:#fff3cd;border-left:3px solid #ffc107;padding:10px 14px;border-radius:4px;margin:10px 0;font-size:12px;color:#856404}
+        .arch-diagram{background:#0f172a;color:#e2e8f0;padding:16px;border-radius:4px;font-family:'Courier New',monospace;font-size:12px;line-height:1.8;margin:10px 0;overflow-x:auto}
+        a{color:var(--relay-primary)}
+        .toc{columns:2;column-gap:20px;margin:10px 0}
+        .toc a{display:block;padding:3px 0;font-size:13px;text-decoration:none;color:var(--relay-text)}
+        .toc a:hover{color:var(--relay-primary)}
+        @media(max-width:640px){.container{padding:12px}.toc{columns:1}}
+    </style>
+</head>
+<body>
+
+<div class="top-bar">
+    <div>
+        <h1>Carrier Dispatch AI Documentation</h1>
+        <span>Complete technical reference for the Relay On Demand automation system</span>
+    </div>
+    <a href="/automationtest/" class="back-btn">Back to Chat</a>
+</div>
+
+<div class="container">
+
+<div class="intro">
+    <h2>System Overview</h2>
+    <p>AI-powered carrier dispatch assistant for Relay On Demand. Carriers place orders, manage drivers, and view order status by chatting in natural language. The AI uses a guided multi-turn conversation flow to gather information before submitting orders, with a frontend confirmation gate that prevents accidental submissions. The system understands 4 form types and automatically selects the correct one based on the user's request.</p>
+</div>
+
+<!-- TABLE OF CONTENTS -->
+<details open>
+<summary>Table of Contents</summary>
+<div class="section-body">
+<div class="toc">
+    <a href="#arch">1. Architecture &amp; Service Flow</a>
+    <a href="#files">2. Files &amp; Locations</a>
+    <a href="#env">3. Environment, Ports &amp; Processes</a>
+    <a href="#api-v2">4. API v2 Endpoints</a>
+    <a href="#relay-api">5. Relay REST API Client</a>
+    <a href="#llm">6. LLM Integration</a>
+    <a href="#intents">7. Intent Detection System</a>
+    <a href="#forms">8. Form Types</a>
+    <a href="#order-model">9. Order Data Model</a>
+    <a href="#commands">10. LLM Command Tags &amp; Confirmation Gate</a>
+    <a href="#frontend-js">11. Frontend JavaScript Reference</a>
+    <a href="#conversation-flow">11b. Multi-Turn Conversation &amp; Confirmation Gate</a>
+    <a href="#chat-server">12. Chat Server (chat_server.py)</a>
+    <a href="#api-server">13. API Server (api_server.py)</a>
+    <a href="#relay-client">14. Relay API Client (relay_api.py)</a>
+</div>
+</div>
+</details>
+
+<!-- 1. ARCHITECTURE -->
+<details id="arch">
+<summary>1. Architecture &amp; Service Flow</summary>
+<div class="section-body">
+<p>The system has a <strong>3-tier architecture</strong> with a Cloudflare tunnel for public access:</p>
+<div class="arch-diagram">User Browser
+  |
+  |  HTTPS (Cloudflare Tunnel)
+  v
+ai.appsscale.com ----cloudflared----&gt; WSL (localhost)
+  |                                        |
+  |  /automationtest/*                     |
+  |  /api/automation/chat, /api/v2/*       |
+  v                                        v
+chat_server.py (Port 9800)           Model Coordinator (Port 9999)
+  |  Flask web server                  Enforces single-model loading
+  |  Serves HTML, proxies all calls    Routes to LM Studio (Port 1234)
+  |
+  |  /api/v2/* proxied to:
+  v
+api_server.py (Port 9500)
+  |  Flask REST API server
+  |  Direct HTTP calls to Relay
+  v
+relay_api.py (RelayAPI class)
+  |  HTTP client with auth
+  v
+Relay REST API
+  https://ar3lay0pndm4ndi.relayondemand.com/relayapi/api/</div>
+
+<h3>Request Flow: Chat Message</h3>
+<ol>
+    <li>User types message in <code>automation_chat.html</code></li>
+    <li>Frontend detects intent via regex patterns</li>
+    <li>For LLM intents: POST <code>/api/chat</code> with messages array</li>
+    <li><code>chat_server.py</code> proxies to LM Studio API</li>
+    <li>LM Studio streams response (SSE)</li>
+    <li>Frontend parses for ORDER_DATA or API_ACTION commands</li>
+</ol>
+
+<h3>Request Flow: Order Placement (Multi-Turn with Confirmation Gate)</h3>
+<ol>
+    <li>User describes what they need (may be partial or complete info)</li>
+    <li>LLM follows 6-step conversation flow: gathers missing info through follow-up questions</li>
+    <li>LLM shows order summary and asks user to confirm</li>
+    <li>User confirms &rarr; LLM outputs <code>ORDER_DATA: {json}</code></li>
+    <li>Frontend parses ORDER_DATA, validates (pickup address, classic driver ID)</li>
+    <li><strong>Confirmation Gate:</strong> Order stored in <code>PENDING_ORDER</code>, review card shown to user</li>
+    <li>User types "confirm" / "submit" &rarr; Frontend submits; "cancel" &rarr; cleared; anything else &rarr; sent to LLM for modification</li>
+    <li>POST <code>/api/v2/place-order</code> with order data</li>
+    <li><code>chat_server.py</code> proxies to <code>api_server.py:9500</code></li>
+    <li><code>api_server.py</code> calls <code>relay_api.build_order_data()</code></li>
+    <li><code>relay_api.py</code> calls POST <code>PlaceOrder/NewOrder</code></li>
+    <li>Result flows back through chain to browser</li>
+</ol>
+<div class="note"><strong>Safety:</strong> Orders are NEVER auto-submitted. The system has two confirmation layers: (1) the LLM asks for verbal confirmation before outputting ORDER_DATA, and (2) the frontend confirmation gate requires the user to explicitly type "confirm" before the API call is made.</div>
+</div>
+</details>
+
+<!-- 2. FILES -->
+<details id="files">
+<summary>2. Files &amp; Locations</summary>
+<div class="section-body">
+<table>
+    <tr><th>File</th><th>Path</th><th>Purpose</th></tr>
+    <tr><td><code>automation_chat.html</code></td><td>services/carrier-automation/</td><td>Frontend chat interface (HTML/CSS/JS, ~1960 lines)</td></tr>
+    <tr><td><code>chat_server.py</code></td><td>services/carrier-automation/</td><td>Flask web server, serves HTML, proxies LLM &amp; API calls (port 9800)</td></tr>
+    <tr><td><code>api_server.py</code></td><td>services/carrier-automation/</td><td>Flask REST API, direct HTTP to Relay API (port 9500)</td></tr>
+    <tr><td><code>relay_api.py</code></td><td>services/carrier-automation/scripts/</td><td>RelayAPI class, wraps Relay REST API with auth</td></tr>
+    <tr><td><code>automation.py</code></td><td>services/carrier-automation/scripts/</td><td>Playwright browser automation (legacy)</td></tr>
+    <tr><td><code>docs.html</code></td><td>services/carrier-automation/</td><td>This documentation page</td></tr>
+    <tr><td><code>filter.html</code></td><td>services/carrier-automation/</td><td>Smart Filter interface</td></tr>
+</table>
+</div>
+</details>
+
+<!-- 3. ENVIRONMENT -->
+<details id="env">
+<summary>3. Environment, Ports &amp; Processes</summary>
+<div class="section-body">
+<h3>Ports</h3>
+<table>
+    <tr><th>Port</th><th>Service</th><th>Description</th></tr>
+    <tr><td>9800</td><td>chat_server.py</td><td>Chat web server (HTML + proxy)</td></tr>
+    <tr><td>9500</td><td>api_server.py</td><td>REST API server (Direct Relay API calls)</td></tr>
+    <tr><td>9999</td><td>Model Coordinator</td><td>Routes all LLM requests, enforces single-model loading</td></tr>
+    <tr><td>1234</td><td>LM Studio</td><td>Local AI model inference (accessed via coordinator)</td></tr>
+    <tr><td>443</td><td>Cloudflare Tunnel</td><td>Public HTTPS via cloudflared</td></tr>
+</table>
+
+<h3>Environment Variables</h3>
+<table>
+    <tr><th>Variable</th><th>Default</th><th>Used In</th></tr>
+    <tr><td><code>CARRIER_USERNAME</code></td><td>apitest@test.com</td><td>relay_api.py</td></tr>
+    <tr><td><code>CARRIER_PASSWORD</code></td><td>(set in env)</td><td>relay_api.py</td></tr>
+</table>
+
+<h3>Process Names &amp; Services</h3>
+<table>
+    <tr><th>Process</th><th>How to Start</th><th>How to Stop</th></tr>
+    <tr><td>chat_server.py</td><td><code>python3 chat_server.py</code></td><td>Ctrl+C / kill PID</td></tr>
+    <tr><td>api_server.py</td><td><code>python3 api_server.py</code></td><td>Ctrl+C / kill PID</td></tr>
+    <tr><td>LM Studio</td><td>Desktop app or API server</td><td>Desktop app</td></tr>
+    <tr><td>cloudflared</td><td>Windows service (auto-start)</td><td><code>cloudflared service stop</code></td></tr>
+</table>
+
+<h3>Public URLs</h3>
+<table>
+    <tr><th>URL</th><th>Target</th></tr>
+    <tr><td>https://ai.appsscale.com/automationtest/</td><td>chat_server.py:9800 &rarr; automation_chat.html</td></tr>
+    <tr><td>https://ai.appsscale.com/filter.html</td><td>chat_server.py:9800 &rarr; filter.html</td></tr>
+    <tr><td>http://localhost:9800/automationtest/</td><td>Direct local access</td></tr>
+    <tr><td>http://localhost:9500/api/v2/*</td><td>Direct API access</td></tr>
+</table>
+</div>
+</details>
+
+<!-- 4. API V2 ENDPOINTS -->
+<details id="api-v2">
+<summary>4. API v2 Endpoints (api_server.py)</summary>
+<div class="section-body">
+<p>All v2 endpoints are proxied through <code>chat_server.py:9800/api/v2/*</code> to <code>api_server.py:9500/api/v2/*</code>.</p>
+
+<table>
+    <tr><th>Method</th><th>Endpoint</th><th>Description</th></tr>
+    <tr><td><span class="method post">POST</span></td><td class="path">/api/v2/login</td><td>Authenticate with Relay API. Body: <code>{email, password}</code> (optional, falls back to env vars)</td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">/api/v2/context</td><td>Full LLM context: form types, reference data, carrier info</td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">/api/v2/form-types</td><td>Available form type definitions</td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">/api/v2/reference-data</td><td>Task types, trailer types, endorsement types</td></tr>
+    <tr><td><span class="method post">POST</span></td><td class="path">/api/v2/estimate</td><td>Get distance/cost estimate. Body: full order data</td></tr>
+    <tr><td><span class="method post">POST</span></td><td class="path">/api/v2/place-order</td><td>Place a dispatch order. Body: simplified or raw order data</td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">/api/v2/orders?type=now|scheduled|all</td><td>List orders by type</td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">/api/v2/orders/&lt;id&gt;</td><td>Order detail by ID</td></tr>
+    <tr><td><span class="method post">POST</span></td><td class="path">/api/v2/orders/&lt;id&gt;/cancel</td><td>Cancel order. Body: <code>{reason}</code></td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">/api/v2/drivers?type=own|preferred|active</td><td>List drivers by type</td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">/api/v2/quick-orders</td><td>Quick order templates</td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">/api/v2/multi-driver-blocks</td><td>Multi-driver block schedules</td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">/api/v2/dashboard</td><td>Dashboard counts and notifications</td></tr>
+</table>
+
+<h3>Place Order Request Format</h3>
+<p>Accepts simplified field names (mapped internally):</p>
+<div class="code">{
+  "start_address": "1725 W 17th St, Santa Ana CA",
+  "destination_address": "456 Oak Ave, Los Angeles CA",
+  "when_want_driver": "2",          // 0=exact, 1=timeframe, 2=not sure
+  "driver_pay_type": "0",           // 0=flat, 1=hourly, 2=per week, 3=per load, 4=per mile
+  "driver_book_duration": "2",      // hours
+  "form_type": "quick_entry",       // quick_entry | smart_wizard | classic_entry
+  "flat_amount": "200",             // if driver_pay_type=0
+  "trailer_type_id": "",
+  "special_notes": "",
+  "schedule_time": ""               // ISO datetime if scheduling
+}</div>
+
+<h3>Place Order Response</h3>
+<div class="code">{
+  "success": true|false,
+  "Status": true|false,
+  "Message": "Success" | "Index was out of range" | ...,
+  "user_error": "Human-readable error message (on failure)"
+}</div>
+</div>
+</details>
+
+<!-- 5. RELAY REST API -->
+<details id="relay-api">
+<summary>5. Relay REST API Client</summary>
+<div class="section-body">
+<p>Base URL: <code>https://ar3lay0pndm4ndi.relayondemand.com/relayapi/api/</code></p>
+
+<h3>Authentication</h3>
+<div class="code">POST User/CarrierLogin
+Body: {"Email": "...", "Password": "..."}
+Response: {"Data": {"AuthToken": "...", "CarrierName": "...", ...}}</div>
+<p>Auth token is sent as header: <code>AuthToken: Bearer &lt;token&gt;</code></p>
+
+<h3>Key Relay Endpoints Used</h3>
+<table>
+    <tr><th>Method</th><th>Endpoint</th><th>Purpose</th></tr>
+    <tr><td><span class="method post">POST</span></td><td class="path">User/CarrierLogin</td><td>Authenticate carrier</td></tr>
+    <tr><td><span class="method post">POST</span></td><td class="path">User/ValidateToken</td><td>Check token validity</td></tr>
+    <tr><td><span class="method post">POST</span></td><td class="path">PlaceOrder/NewOrder</td><td>Submit new dispatch order</td></tr>
+    <tr><td><span class="method post">POST</span></td><td class="path">PlaceOrder/TotalEstimatedDistance</td><td>Get cost/distance estimate</td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">PlaceOrder/TrailerTypes</td><td>Get trailer type list</td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">PlaceOrder/EndorsementTypes</td><td>Get endorsement type list</td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">PlaceOrder/GetQuickOrderList</td><td>Quick order templates</td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">PlaceOrder/CheckPlaceOrderAllowed</td><td>Permission check</td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">Setting/GetTask</td><td>Task type definitions</td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">Setting/GetSettings</td><td>Carrier settings</td></tr>
+    <tr><td><span class="method post">POST</span></td><td class="path">Order/GetAllOrderOfCarrier</td><td>Paginated order list</td></tr>
+    <tr><td><span class="method post">POST</span></td><td class="path">Order/GetNowOnGoingOrders</td><td>Active "Now" orders</td></tr>
+    <tr><td><span class="method post">POST</span></td><td class="path">Order/GetScheduledOnGoingOrders</td><td>Scheduled orders</td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">Order/GetOrderDetailByOrderID/{id}</td><td>Single order detail</td></tr>
+    <tr><td><span class="method post">POST</span></td><td class="path">Order/MarkAsCancelled</td><td>Cancel order</td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">CarrierDriver/GetAllDrivers</td><td>Own fleet drivers</td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">CarrierDriver/GetActiveCarrierDrivers</td><td>Active fleet drivers</td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">RelayDriver/GetPreferredNetworkDriver</td><td>Preferred network drivers</td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">Carrier/GetCarrierDetail/0</td><td>Carrier profile</td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">Carrier/GetCounts</td><td>Dashboard counts</td></tr>
+    <tr><td><span class="method get">GET</span></td><td class="path">MultiDriverBlock/Get</td><td>Multi-driver blocks</td></tr>
+</table>
+</div>
+</details>
+
+<!-- 6. LLM INTEGRATION -->
+<details id="llm">
+<summary>6. LLM Integration</summary>
+<div class="section-body">
+<h3>Model Configuration</h3>
+<table>
+    <tr><th>Setting</th><th>Value</th></tr>
+    <tr><td>Model</td><td><code>qwen/qwen3-coder-next</code> (dynamic, set via .env)</td></tr>
+    <tr><td>Public Endpoint</td><td><code>https://api.appsscale.com/v1/chat/completions</code></td></tr>
+    <tr><td>LM Studio API</td><td><code>http://localhost:1234/v1/chat/completions</code> (direct to LM Studio)</td></tr>
+    <tr><td>Model Coordinator</td><td><code>http://localhost:9999/coordinator/*</code> (model loading coordination only)</td></tr>
+    <tr><td>Streaming</td><td>SSE (Server-Sent Events)</td></tr>
+    <tr><td>Format</td><td>OpenAI-compatible chat completions API</td></tr>
+</table>
+<div class="note"><strong>Architecture:</strong> Services connect directly to LM Studio at port 1234 for API calls. The model coordinator at port 9999 handles model loading/switching coordination only (not API proxying).</div>
+
+<h3>SSE Streaming Protocol</h3>
+<div class="code">// Each chunk from the server:
+data: {"choices":[{"delta":{"content":"token"}}]}
+
+// End of stream:
+data: [DONE]</div>
+
+<h3>Think Tag Handling</h3>
+<p>The model may output <code>&lt;think&gt;...&lt;/think&gt;</code> tags for reasoning. The frontend:</p>
+<ul>
+    <li>Shows "Thinking..." while inside think tags during streaming</li>
+    <li>Hides think content from final display</li>
+    <li>Only renders text after the closing <code>&lt;/think&gt;</code> tag</li>
+</ul>
+
+<h3>System Prompt Structure</h3>
+<p>Built dynamically by <code>buildSystemPrompt()</code> function. The prompt enforces a strict multi-turn conversation flow to prevent the LLM from rushing to submit orders without gathering enough information.</p>
+
+<h3>6-Step Conversation Flow (CRITICAL)</h3>
+<p>The system prompt requires the LLM to follow these steps in order:</p>
+<ol>
+    <li><strong>UNDERSTAND</strong> &mdash; Read the user's message carefully, extract any provided info (addresses, times, pay, driver names, trailer types, etc.)</li>
+    <li><strong>IDENTIFY FORM TYPE</strong> &mdash; Determine which form fits: <code>quick_entry</code> (fast dispatch), <code>smart_wizard</code> (detailed requirements), or <code>classic_entry</code> (own fleet driver)</li>
+    <li><strong>CHECK WHAT IS MISSING</strong> &mdash; For the chosen form type, identify which required/important fields are still unknown</li>
+    <li><strong>ASK</strong> &mdash; Ask the user for any missing important information with specific questions</li>
+    <li><strong>SUMMARIZE &amp; CONFIRM</strong> &mdash; Once enough info is collected, show a human-readable order summary and ask "Should I submit this order?" (Do NOT output ORDER_DATA yet)</li>
+    <li><strong>SUBMIT</strong> &mdash; ONLY after the user explicitly confirms (yes/confirm/submit/go), output <code>ORDER_DATA: {json}</code></li>
+</ol>
+
+<h3>Key Prompt Behaviors</h3>
+<ul>
+    <li><strong>Info dump handling:</strong> If the user provides a lot of info in one message, the LLM extracts ALL relevant fields and only asks about what is still missing</li>
+    <li><strong>Minimal info handling:</strong> If the user gives just a pickup address with no other details, the LLM asks about destination, timing, and pay preferences (does NOT submit with defaults)</li>
+    <li><strong>Explicit defaults:</strong> Only uses default values when the user says "just use defaults", "that's fine", or "go ahead" after being asked</li>
+    <li><strong>Error recovery:</strong> If an order fails, tells the user what went wrong and asks what they want to change (no auto-retry)</li>
+    <li><strong>No accidental submissions:</strong> The prompt explicitly warns that ORDER_DATA should NEVER appear in examples or explanations, as the system executes ANY ORDER_DATA line as a real order</li>
+</ul>
+
+<h3>Prompt Sections (in order)</h3>
+<ol>
+    <li><strong>Role definition</strong> &mdash; AI dispatch assistant for Relay On Demand</li>
+    <li><strong>6-step conversation flow</strong> &mdash; UNDERSTAND &rarr; IDENTIFY &rarr; CHECK MISSING &rarr; ASK &rarr; SUMMARIZE &rarr; SUBMIT</li>
+    <li><strong>Important behaviors</strong> &mdash; Info dump handling, minimal info handling, defaults policy</li>
+    <li><strong>Output format rules</strong> &mdash; ORDER_DATA and API_ACTION command syntax</li>
+    <li><strong>6 required fields</strong> &mdash; start_address, destination_address, when_want_driver, driver_pay_type, driver_book_duration, form_type</li>
+    <li><strong>Pay amount mapping</strong> &mdash; Which pay field to include based on driver_pay_type</li>
+    <li><strong>Default values</strong> &mdash; when_want_driver="2", driver_pay_type="0", flat_amount="0", driver_book_duration="2", form_type="quick_entry"</li>
+    <li><strong>Form type details &amp; requirements</strong> &mdash; Including classic_entry's 3 required fields</li>
+    <li><strong>Optional fields</strong> &mdash; Trailer types, schedule, notes, task IDs</li>
+    <li><strong>API_ACTION commands</strong> &mdash; 12 actions the LLM can invoke for data queries</li>
+    <li><strong>Conversation examples</strong> &mdash; Multi-turn example (ask &rarr; answer &rarr; summary &rarr; confirm &rarr; submit) and info-dump example</li>
+    <li><strong>Dynamic context</strong> &mdash; Task types, trailer types, endorsement types, carrier name (injected from API_CONTEXT at runtime)</li>
+</ol>
+</div>
+</details>
+
+<!-- 7. INTENT DETECTION -->
+<details id="intents">
+<summary>7. Intent Detection System</summary>
+<div class="section-body">
+<p>Function <code>detectIntent(message)</code> classifies user messages using regex patterns. First match wins (priority order):</p>
+<table>
+    <tr><th>#</th><th>Intent</th><th>Pattern</th><th>Action</th></tr>
+    <tr><td>1</td><td><code>form_info</code></td><td><code>/form.?type|what.*form|which.*form|explain.*form/</code></td><td>Show static form type descriptions (no LLM)</td></tr>
+    <tr><td>2</td><td><code>place_order</code></td><td><code>/dispatch|send.*driver|place.*(order|dispatch)|create.*(order|dispatch)/</code></td><td>Send to LLM with order prompt</td></tr>
+    <tr><td>3</td><td><code>smart_wizard</code></td><td><code>/wizard|step.by.step|guide|help.*plac/</code></td><td>Send to LLM (smart wizard mode)</td></tr>
+    <tr><td>4</td><td><code>multi_driver_blocks</code></td><td><code>/block|multi.*driver|recurring|schedule.*block/</code></td><td>Send to LLM</td></tr>
+    <tr><td>5</td><td><code>classic_entry</code></td><td><code>/classic|assign.*my.*driver|own.*driver|fleet/</code></td><td>Send to LLM (classic entry mode)</td></tr>
+    <tr><td>6</td><td><code>view_orders</code></td><td><code>/(current|my|active|show|list).*orders?/</code></td><td>GET /api/v2/orders (no LLM)</td></tr>
+    <tr><td>7</td><td><code>cancel_order</code></td><td><code>/cancel.*(order|dispatch)/</code></td><td>Send to LLM</td></tr>
+    <tr><td>8</td><td><code>order_detail</code></td><td><code>/order.*(detail|#|\d{3,})/</code></td><td>Send to LLM</td></tr>
+    <tr><td>9</td><td><code>drivers</code></td><td><code>/(show|list|available|preferred|my).*drivers?/</code></td><td>GET /api/v2/drivers (no LLM)</td></tr>
+    <tr><td>10</td><td><code>legacy</code></td><td><code>/(analyze|screenshot|page|navigate)/</code></td><td>Legacy browser automation</td></tr>
+    <tr><td>11</td><td><code>chat</code></td><td>(default)</td><td>General chat via LLM</td></tr>
+</table>
+</div>
+</details>
+
+<!-- 8. FORM TYPES -->
+<details id="forms">
+<summary>8. Form Types</summary>
+<div class="section-body">
+<table>
+    <tr><th>Form Type</th><th>API Key</th><th>Description</th><th>API Flags</th></tr>
+    <tr><td><strong>Quick Entry</strong></td><td><code>quick_entry</code></td><td>Fastest way to place an order. Find any available driver.</td><td><code>FromSmartWizard: false</code></td></tr>
+    <tr><td><strong>Smart Wizard</strong></td><td><code>smart_wizard</code></td><td>Guided step-by-step for complex orders.</td><td><code>FromSmartWizard: true</code></td></tr>
+    <tr><td><strong>Classic Entry</strong></td><td><code>classic_entry</code></td><td>Assign your own fleet driver. Requires <code>carrier_driver_id</code>.</td><td><code>CarrierDriverID: required</code></td></tr>
+    <tr><td><strong>Multi-Driver Blocks</strong></td><td><code>multi_driver_blocks</code></td><td>Pre-scheduled recurring driver blocks.</td><td>Uses separate endpoint</td></tr>
+</table>
+</div>
+</details>
+
+<!-- 9. ORDER DATA MODEL -->
+<details id="order-model">
+<summary>9. Order Data Model (55+ Fields)</summary>
+<div class="section-body">
+<p>The <code>build_order_data()</code> method in <code>relay_api.py</code> constructs a 55+ field payload for <code>PlaceOrder/NewOrder</code>.</p>
+
+<h3>Required Fields (LLM must provide)</h3>
+<table>
+    <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+    <tr><td><code>start_address</code></td><td>string</td><td>Pickup address (full street address)</td></tr>
+    <tr><td><code>destination_address</code></td><td>string</td><td>Drop-off address ("" if not specified)</td></tr>
+    <tr><td><code>when_want_driver</code></td><td>string</td><td>"0"=exact time, "1"=timeframe, "2"=not sure</td></tr>
+    <tr><td><code>driver_pay_type</code></td><td>string</td><td>"0"=flat, "1"=hourly, "2"=per week, "3"=per load, "4"=per mile</td></tr>
+    <tr><td><code>driver_book_duration</code></td><td>string</td><td>Hours as string (e.g., "2")</td></tr>
+    <tr><td><code>form_type</code></td><td>string</td><td>"quick_entry" | "smart_wizard" | "classic_entry"</td></tr>
+</table>
+
+<h3>Optional Fields</h3>
+<table>
+    <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+    <tr><td><code>flat_amount</code></td><td>string</td><td>Flat pay amount (if pay_type=0)</td></tr>
+    <tr><td><code>hourly_amount</code></td><td>string</td><td>Hourly rate (if pay_type=1)</td></tr>
+    <tr><td><code>per_load_amount</code></td><td>string</td><td>Per load rate (if pay_type=3)</td></tr>
+    <tr><td><code>per_mile_amount</code></td><td>string</td><td>Per mile rate (if pay_type=4)</td></tr>
+    <tr><td><code>per_week_amount</code></td><td>string</td><td>Per week rate (if pay_type=2)</td></tr>
+    <tr><td><code>total_loads</code></td><td>string</td><td>Number of loads (per load pay)</td></tr>
+    <tr><td><code>estimated_total_miles</code></td><td>string</td><td>Estimated miles (per mile pay)</td></tr>
+    <tr><td><code>trailer_type_id</code></td><td>string</td><td>Trailer type ID from reference data</td></tr>
+    <tr><td><code>truck_unit_number</code></td><td>string</td><td>Truck unit number</td></tr>
+    <tr><td><code>trailer_number</code></td><td>string</td><td>Trailer number</td></tr>
+    <tr><td><code>special_notes</code></td><td>string</td><td>Notes visible to driver</td></tr>
+    <tr><td><code>internal_notes</code></td><td>string</td><td>Internal carrier notes</td></tr>
+    <tr><td><code>endorsement_types</code></td><td>string</td><td>Comma-separated endorsement IDs</td></tr>
+    <tr><td><code>additional_stops</code></td><td>string</td><td>Additional stop addresses</td></tr>
+    <tr><td><code>schedule_time</code></td><td>string</td><td>ISO datetime for scheduled orders</td></tr>
+    <tr><td><code>is_one_way</code></td><td>string</td><td>"true" or "false"</td></tr>
+    <tr><td><code>carrier_driver_id</code></td><td>string</td><td>Fleet driver ID (classic entry only)</td></tr>
+    <tr><td><code>carrier_driver_name</code></td><td>string</td><td>Fleet driver name</td></tr>
+</table>
+
+<div class="note"><strong>Critical:</strong> The <code>RecurringDateTime</code> array in the Relay API payload MUST contain at least one entry. If empty, the Relay server throws "Index was out of range". This is handled automatically by <code>build_order_data()</code> and <code>place_order()</code>.</div>
+</div>
+</details>
+
+<!-- 10. COMMAND TAGS -->
+<details id="commands">
+<summary>10. LLM Command Tags &amp; Confirmation Gate</summary>
+<div class="section-body">
+<h3>ORDER_DATA (with Confirmation Gate)</h3>
+<p>Output by LLM to place an order. Frontend parses with regex: <code>/ORDER_DATA:?\s*(\{[^}]*\})/</code></p>
+<div class="code">ORDER_DATA: {"start_address": "123 Main St", "destination_address": "", "when_want_driver": "2", "driver_pay_type": "0", "driver_book_duration": "2", "form_type": "quick_entry", "flat_amount": "200"}</div>
+
+<p><strong>Important:</strong> ORDER_DATA is NOT auto-submitted. When the frontend detects ORDER_DATA in the LLM response, it:</p>
+<ol>
+    <li>Parses the JSON and fills in missing defaults</li>
+    <li>Validates required fields (pickup address, driver ID for classic entry)</li>
+    <li>Stores the order in <code>PENDING_ORDER</code> state variable</li>
+    <li>Displays an <strong>Order Review Card</strong> showing all fields in human-readable format</li>
+    <li>Prompts user: <em>"Type 'confirm' or 'submit' to place this order, or tell me what to change."</em></li>
+</ol>
+
+<h3>Order Review Card Fields</h3>
+<p>The review card displays these fields (when present):</p>
+<ul>
+    <li>Pickup address, Destination, When (ASAP/Scheduled/Timeframe)</li>
+    <li>Schedule date &amp; time (if applicable)</li>
+    <li>Pay type &amp; amount (e.g., "Flat $200")</li>
+    <li>Duration (hours), Form type, Trailer type, Driver name, Special notes</li>
+</ul>
+
+<h3>Confirmation Gate Responses</h3>
+<table>
+    <tr><th>User Response</th><th>Action</th></tr>
+    <tr><td>Confirm words: <code>yes</code>, <code>confirm</code>, <code>submit</code>, <code>go</code>, <code>do it</code>, <code>place it</code>, <code>go ahead</code>, <code>send it</code>, <code>ok</code>, <code>okay</code>, <code>sure</code>, <code>proceed</code></td><td>Submits order via POST <code>/api/v2/place-order</code></td></tr>
+    <tr><td>Cancel words: <code>no</code>, <code>cancel</code>, <code>nevermind</code>, <code>stop</code>, <code>don't</code>, <code>nah</code>, <code>nope</code></td><td>Clears pending order, shows cancellation message</td></tr>
+    <tr><td>Anything else (e.g., "change the pay to $300")</td><td>Injects pending order context into chat history, sends to LLM for modification. LLM shows updated summary.</td></tr>
+</table>
+
+<h3>API_ACTION</h3>
+<p>Output by LLM to query data. Frontend parses with regex: <code>/API_ACTION:?\s*(\{[^}]*(?:\{[^}]*\}[^}]*)?\})/</code></p>
+<div class="code">API_ACTION: {"action": "view_orders", "params": {}}</div>
+
+<h3>Available API_ACTION Commands</h3>
+<table>
+    <tr><th>Action</th><th>Maps To</th><th>Description</th></tr>
+    <tr><td><code>view_orders</code></td><td>GET /api/v2/orders?type=now</td><td>Current active orders</td></tr>
+    <tr><td><code>view_scheduled_orders</code></td><td>GET /api/v2/orders?type=scheduled</td><td>Scheduled orders</td></tr>
+    <tr><td><code>view_all_orders</code></td><td>GET /api/v2/orders?type=all</td><td>All orders</td></tr>
+    <tr><td><code>view_order_detail</code></td><td>GET /api/v2/orders/{id}</td><td>Single order detail</td></tr>
+    <tr><td><code>cancel_order</code></td><td>POST /api/v2/orders/{id}/cancel</td><td>Cancel an order</td></tr>
+    <tr><td><code>view_drivers</code></td><td>GET /api/v2/drivers?type=own</td><td>Own fleet drivers</td></tr>
+    <tr><td><code>view_preferred_drivers</code></td><td>GET /api/v2/drivers?type=preferred</td><td>Preferred drivers</td></tr>
+    <tr><td><code>view_active_drivers</code></td><td>GET /api/v2/drivers?type=active</td><td>Active drivers</td></tr>
+    <tr><td><code>view_quick_orders</code></td><td>GET /api/v2/quick-orders</td><td>Quick order templates</td></tr>
+    <tr><td><code>view_multi_driver_blocks</code></td><td>GET /api/v2/multi-driver-blocks</td><td>Multi-driver blocks</td></tr>
+    <tr><td><code>estimate</code></td><td>POST /api/v2/estimate</td><td>Distance/cost estimate</td></tr>
+    <tr><td><code>view_dashboard</code></td><td>GET /api/v2/dashboard</td><td>Dashboard data</td></tr>
+</table>
+</div>
+</details>
+
+<!-- 11. FRONTEND JS -->
+<details id="frontend-js">
+<summary>11. Frontend JavaScript Reference</summary>
+<div class="section-body">
+<h3>Global Variables</h3>
+<table>
+    <tr><th>Variable</th><th>Type</th><th>Purpose</th></tr>
+    <tr><td><code>CHAT_HISTORY</code></td><td>Array</td><td>Message objects {role, content}. Last 8 sent to LLM.</td></tr>
+    <tr><td><code>API_CONTEXT</code></td><td>Object</td><td>Cached context: form_types, reference_data, carrier</td></tr>
+    <tr><td><code>isConnectedLM</code></td><td>Boolean</td><td>LM Studio connection status</td></tr>
+    <tr><td><code>isConnectedAPI</code></td><td>Boolean</td><td>Relay API connection status</td></tr>
+    <tr><td><code>PENDING_ORDER</code></td><td>Object|null</td><td>Stores parsed ORDER_DATA awaiting user confirmation. Set when LLM outputs ORDER_DATA, cleared on confirm/cancel/modify.</td></tr>
+    <tr><td><code>_stepLogEl</code></td><td>DOM Element</td><td>Current step log container reference</td></tr>
+</table>
+
+<h3>Core Functions</h3>
+<table>
+    <tr><th>Function</th><th>Description</th></tr>
+    <tr><td><code>testConnections()</code></td><td>Pings /api/chat and /api/v2/form-types to check connectivity</td></tr>
+    <tr><td><code>updateStatus(service, state, text)</code></td><td>Updates status dot color and label text</td></tr>
+    <tr><td><code>loadContext()</code></td><td>GET /api/v2/context, caches form types and reference data</td></tr>
+    <tr><td><code>callAPI(endpoint, method, body)</code></td><td>Generic fetch wrapper for REST calls</td></tr>
+    <tr><td><code>callLLMStream(messages, targetEl)</code></td><td>SSE streaming to DOM element with think tag handling</td></tr>
+    <tr><td><code>sendMessage()</code></td><td>Primary message handler. First checks for PENDING_ORDER (confirm/cancel/modify), then detects intent, routes to LLM or direct API, parses ORDER_DATA and API_ACTION from response. ORDER_DATA triggers confirmation gate instead of auto-submit.</td></tr>
+    <tr><td><code>detectIntent(message)</code></td><td>Regex-based intent classifier (11 intents)</td></tr>
+    <tr><td><code>buildSystemPrompt()</code></td><td>Constructs dynamic system prompt with context</td></tr>
+    <tr><td><code>executeAPIAction(action, params)</code></td><td>Executes parsed API_ACTION commands</td></tr>
+    <tr><td><code>renderMessage(role, content, toolUse)</code></td><td>Adds message bubble to chat</td></tr>
+    <tr><td><code>formatOrderResponse(data)</code></td><td>Formats order list for display</td></tr>
+    <tr><td><code>formatDriverResponse(data)</code></td><td>Formats driver list for display</td></tr>
+    <tr><td><code>formatFormTypes()</code></td><td>Returns static form type descriptions</td></tr>
+    <tr><td><code>formatAPIResult(action, data)</code></td><td>Routes to appropriate formatter</td></tr>
+    <tr><td><code>beginStepLog()</code></td><td>Creates step log container</td></tr>
+    <tr><td><code>logStep(text, status)</code></td><td>Adds step line (active/done/error)</td></tr>
+    <tr><td><code>finishStepLog()</code></td><td>Marks final step as done</td></tr>
+</table>
+
+<h3>DOM Element IDs</h3>
+<table>
+    <tr><th>ID</th><th>Element</th><th>Purpose</th></tr>
+    <tr><td><code>lmStatusDot</code></td><td>span</td><td>AI Engine status indicator dot</td></tr>
+    <tr><td><code>lmStatusText</code></td><td>span</td><td>AI Engine status label</td></tr>
+    <tr><td><code>apiStatusDot</code></td><td>span</td><td>Relay API status indicator dot</td></tr>
+    <tr><td><code>apiStatusText</code></td><td>span</td><td>Relay API status label</td></tr>
+    <tr><td><code>automationApiUrl</code></td><td>input</td><td>Custom API URL config input</td></tr>
+    <tr><td><code>configPanel</code></td><td>div</td><td>Config panel container</td></tr>
+    <tr><td><code>apiMode</code></td><td>span</td><td>Display: "Direct API"</td></tr>
+    <tr><td><code>carrierName</code></td><td>span</td><td>Logged-in carrier name</td></tr>
+    <tr><td><code>formTypeCount</code></td><td>span</td><td>Available form type count</td></tr>
+    <tr><td><code>docsPanel</code></td><td>div</td><td>System docs overlay</td></tr>
+    <tr><td><code>apiPanel</code></td><td>div</td><td>API docs overlay</td></tr>
+    <tr><td><code>messages</code></td><td>div</td><td>Chat messages container</td></tr>
+    <tr><td><code>userInput</code></td><td>textarea</td><td>User input field</td></tr>
+    <tr><td><code>sendBtn</code></td><td>button</td><td>Send message button</td></tr>
+</table>
+</div>
+</details>
+
+<!-- 11b. CONVERSATION FLOW & CONFIRMATION GATE -->
+<details id="conversation-flow">
+<summary>11b. Multi-Turn Conversation &amp; Confirmation Gate</summary>
+<div class="section-body">
+<h3>Design Philosophy</h3>
+<p>The system uses a <strong>two-layer safety model</strong> to prevent accidental order submissions:</p>
+<ol>
+    <li><strong>LLM Layer:</strong> The system prompt enforces a 6-step conversation flow. The LLM must ask questions, gather info, show a summary, and get verbal confirmation BEFORE outputting ORDER_DATA.</li>
+    <li><strong>Frontend Layer:</strong> Even after the LLM outputs ORDER_DATA, the frontend does NOT auto-submit. It stores the order in <code>PENDING_ORDER</code> and shows a review card requiring explicit user confirmation.</li>
+</ol>
+
+<h3>Conversation Flow Diagram</h3>
+<div class="arch-diagram">User: "I need a driver at 123 Main St"
+  |
+  v
+LLM Step 1-3: Extract info, identify form type, check missing fields
+  |
+  v
+LLM Step 4: "Got it! Pickup at 123 Main St. A few questions:
+             1. Destination? 2. When? 3. Pay preferences?"
+  |
+  v
+User: "No destination, ASAP, flat rate $150"
+  |
+  v
+LLM Step 5: "Order summary:
+             - Pickup: 123 Main St
+             - When: ASAP
+             - Pay: Flat $150
+             Should I submit this?"
+  |
+  v
+User: "Yes"
+  |
+  v
+LLM Step 6: Outputs ORDER_DATA: {json}
+  |
+  v
+Frontend: Parses JSON, validates, stores in PENDING_ORDER
+  |
+  v
+Frontend: Shows ORDER REVIEW card with all fields
+          "Type 'confirm' to place this order, or tell me what to change."
+  |
+  v
+User: "confirm"  --->  POST /api/v2/place-order  --->  Success/Failure
+User: "cancel"   --->  Clear PENDING_ORDER, show cancellation
+User: "change X" --->  Send to LLM with order context for modification</div>
+
+<h3>PENDING_ORDER Lifecycle</h3>
+<table>
+    <tr><th>Event</th><th>PENDING_ORDER State</th><th>What Happens</th></tr>
+    <tr><td>LLM outputs ORDER_DATA</td><td>Set to parsed order object</td><td>Review card shown, awaiting confirmation</td></tr>
+    <tr><td>User says "confirm"/"submit"</td><td>Cleared to null</td><td>Order submitted to API, result shown</td></tr>
+    <tr><td>User says "cancel"/"no"</td><td>Cleared to null</td><td>Cancellation message shown</td></tr>
+    <tr><td>User says anything else</td><td>Cleared to null</td><td>Order context injected into chat, LLM handles modification and shows updated summary</td></tr>
+    <tr><td>Order submission fails</td><td>Cleared to null</td><td>Error message shown, user asked what to change</td></tr>
+</table>
+
+<h3>Order Modification Flow</h3>
+<p>When the user responds with a modification request (e.g., "change the pay to $300") while <code>PENDING_ORDER</code> is active:</p>
+<ol>
+    <li>Previous order data is serialized to JSON and injected into <code>CHAT_HISTORY</code> as a system message</li>
+    <li><code>PENDING_ORDER</code> is cleared</li>
+    <li>Message falls through to normal LLM handling</li>
+    <li>LLM receives both the user's change request and the previous order context</li>
+    <li>LLM applies changes and shows an updated summary (without outputting ORDER_DATA)</li>
+    <li>User confirms again &rarr; LLM outputs new ORDER_DATA &rarr; new review card shown</li>
+</ol>
+
+<h3>Default Value Auto-Fill</h3>
+<p>When ORDER_DATA is parsed, the frontend fills in any missing required fields with defaults:</p>
+<table>
+    <tr><th>Field</th><th>Default Value</th><th>Condition</th></tr>
+    <tr><td><code>when_want_driver</code></td><td>"0" if schedule present, else "2"</td><td>Missing from JSON</td></tr>
+    <tr><td><code>driver_pay_type</code></td><td>"0" (flat)</td><td>Missing from JSON</td></tr>
+    <tr><td><code>driver_book_duration</code></td><td>"2" (hours)</td><td>Missing from JSON</td></tr>
+    <tr><td><code>form_type</code></td><td>"quick_entry"</td><td>Missing from JSON</td></tr>
+    <tr><td><code>destination_address</code></td><td>"" (empty)</td><td>Missing from JSON</td></tr>
+    <tr><td>Pay amount field</td><td>"0"</td><td>Matching pay field is missing or empty</td></tr>
+</table>
+</div>
+</details>
+
+<!-- 12. CHAT SERVER -->
+<details id="chat-server">
+<summary>12. Chat Server (chat_server.py)</summary>
+<div class="section-body">
+<p>Flask web server on <strong>port 9800</strong>. Serves HTML files and proxies all API calls.</p>
+
+<h3>Configuration Constants</h3>
+<table>
+    <tr><th>Constant</th><th>Value</th></tr>
+    <tr><td><code>LM_STUDIO_API</code></td><td>https://api.appsscale.com/v1/chat/completions</td></tr>
+    <tr><td><code>AUTOMATION_API</code></td><td>http://localhost:9500</td></tr>
+    <tr><td><code>MODEL_NAME</code></td><td>qwen3-coder-next-reap-40b-a3b</td></tr>
+</table>
+
+<h3>Routes</h3>
+<table>
+    <tr><th>Method</th><th>Route</th><th>Purpose</th></tr>
+    <tr><td>GET</td><td><code>/</code></td><td>Serves automation_chat.html</td></tr>
+    <tr><td>GET</td><td><code>/automationtest/</code></td><td>Serves automation_chat.html (no-cache)</td></tr>
+    <tr><td>GET</td><td><code>/filter.html</code></td><td>Serves filter.html</td></tr>
+    <tr><td>POST</td><td><code>/api/automation/chat</code></td><td>LLM proxy for automation chat (SSE streaming)</td></tr>
+    <tr><td>POST</td><td><code>/api/chat</code></td><td>LLM proxy (SSE streaming)</td></tr>
+    <tr><td>POST</td><td><code>/api/chat/vl</code></td><td>Vision-language chat (screenshot + DOM)</td></tr>
+    <tr><td>POST</td><td><code>/api/filter</code></td><td>Smart filter analysis</td></tr>
+    <tr><td>GET</td><td><code>/api/health</code></td><td>Health check</td></tr>
+    <tr><td>*</td><td><code>/api/v2/*</code></td><td>Proxied to api_server.py:9500</td></tr>
+    <tr><td>*</td><td><code>/api/*</code></td><td>Legacy automation proxies</td></tr>
+</table>
+</div>
+</details>
+
+<!-- 13. API SERVER -->
+<details id="api-server">
+<summary>13. API Server (api_server.py)</summary>
+<div class="section-body">
+<p>Flask REST API on <strong>port 9500</strong>. Makes direct HTTP calls to the Relay REST API.</p>
+
+<h3>Key Implementation Details</h3>
+<ul>
+    <li><code>_relay_api = RelayAPI()</code> &mdash; Shared instance, persists across requests</li>
+    <li><code>_relay_api_lock = threading.Lock()</code> &mdash; Thread-safe access to RelayAPI</li>
+    <li><code>_ensure_relay_auth()</code> &mdash; Lazy authentication (login on first request)</li>
+    <li>Threaded mode: <code>app.run(threaded=True)</code></li>
+</ul>
+
+<h3>Error Handling</h3>
+<p>User-friendly error messages added for common Relay API failures:</p>
+<table>
+    <tr><th>Server Error</th><th>User-Friendly Message</th></tr>
+    <tr><td>"Index was out of range"</td><td>"The order is missing scheduling information..."</td></tr>
+    <tr><td>"Object reference not set"</td><td>"The carrier account is not fully set up..."</td></tr>
+    <tr><td>"GetCarrierDriverDetailsById"</td><td>"The carrier account does not have a valid driver profile..."</td></tr>
+</table>
+</div>
+</details>
+
+<!-- 14. RELAY API CLIENT -->
+<details id="relay-client">
+<summary>14. Relay API Client (relay_api.py)</summary>
+<div class="section-body">
+<h3>RelayAPI Class Methods</h3>
+<table>
+    <tr><th>Method</th><th>Description</th></tr>
+    <tr><td><code>login(email, password)</code></td><td>Authenticate, stores auth_token and carrier_name</td></tr>
+    <tr><td><code>validate_token()</code></td><td>Check if current token is valid</td></tr>
+    <tr><td><code>get_task_types()</code></td><td>Get task type definitions (cached)</td></tr>
+    <tr><td><code>get_trailer_types()</code></td><td>Get trailer type list (cached)</td></tr>
+    <tr><td><code>get_endorsement_types()</code></td><td>Get endorsement types (cached)</td></tr>
+    <tr><td><code>get_settings()</code></td><td>Get carrier settings (cached)</td></tr>
+    <tr><td><code>get_states()</code></td><td>Get US states list</td></tr>
+    <tr><td><code>check_place_order_allowed()</code></td><td>Check if carrier can place orders</td></tr>
+    <tr><td><code>get_estimated_distance(data)</code></td><td>Get distance/cost estimate for order</td></tr>
+    <tr><td><code>place_order(data)</code></td><td>Submit order to PlaceOrder/NewOrder</td></tr>
+    <tr><td><code>build_order_data(...)</code></td><td>Build 55-field order payload from simplified fields</td></tr>
+    <tr><td><code>get_orders(page, size)</code></td><td>Paginated order list</td></tr>
+    <tr><td><code>get_current_orders()</code></td><td>Active "Now" orders</td></tr>
+    <tr><td><code>get_scheduled_orders()</code></td><td>Scheduled orders</td></tr>
+    <tr><td><code>get_order_detail(id)</code></td><td>Single order detail</td></tr>
+    <tr><td><code>cancel_order(id, reason)</code></td><td>Cancel an order</td></tr>
+    <tr><td><code>get_carrier_drivers()</code></td><td>Own fleet drivers</td></tr>
+    <tr><td><code>get_active_drivers()</code></td><td>Active fleet drivers</td></tr>
+    <tr><td><code>get_preferred_drivers()</code></td><td>Preferred network drivers</td></tr>
+    <tr><td><code>get_carrier_detail()</code></td><td>Carrier profile</td></tr>
+    <tr><td><code>get_dashboard_counts()</code></td><td>Dashboard counts</td></tr>
+    <tr><td><code>get_form_types()</code></td><td>4 form type definitions (static)</td></tr>
+    <tr><td><code>get_form_context()</code></td><td>Full LLM context (form types + reference data + carrier)</td></tr>
+</table>
+
+<h3>CLI Testing</h3>
+<div class="code">python3 relay_api.py login
+python3 relay_api.py context
+python3 relay_api.py orders
+python3 relay_api.py drivers
+python3 relay_api.py order-detail 5000
+python3 relay_api.py form-types</div>
+</div>
+</details>
+
+</div><!-- container -->
+
+
+<!-- 15. SERVER MANAGEMENT & OPERATIONS -->
+<details>
+<summary>15. Server Management & Operations</summary>
+<div class="section-body">
+<h3>Server Information</h3>
+<table>
+    <tr><th>Property</th><th>Value</th></tr>
+    <tr><td>Server</td><td>5090 (Windows + WSL OracleLinux_9_5)</td></tr>
+    <tr><td>Project Root</td><td><code>C:\Users\appsf\Desktop\AppsForte</code> (Windows)<br/><code>/mnt/c/Users/appsf/Desktop/AppsForte</code> (WSL)</td></tr>
+    <tr><td>Services</td><td><code>carrier-api.service</code> (port 9500)<br/><code>carrier-chat.service</code> (port 9800)</td></tr>
+    <tr><td>Service User</td><td>root</td></tr>
+</table>
+
+<h3>Systemd Commands</h3>
+<div class="code"># API Server (port 9500)
+systemctl status carrier-api
+systemctl restart carrier-api
+journalctl -u carrier-api -f
+
+# Chat Server (port 9800)
+systemctl status carrier-chat
+systemctl restart carrier-chat
+journalctl -u carrier-chat -f</div>
+
+<h3>File Locations</h3>
+<table>
+    <tr><th>File</th><th>Path</th></tr>
+    <tr><td>API Server</td><td><code>/mnt/c/Users/appsf/Desktop/AppsForte/services/carrier-automation/api_server.py</code></td></tr>
+    <tr><td>Chat Server</td><td><code>/mnt/c/Users/appsf/Desktop/AppsForte/services/carrier-automation/chat_server.py</code></td></tr>
+    <tr><td>Relay API Client</td><td><code>/mnt/c/Users/appsf/Desktop/AppsForte/services/carrier-automation/scripts/relay_api.py</code></td></tr>
+    <tr><td>Frontend</td><td><code>/mnt/c/Users/appsf/Desktop/AppsForte/services/carrier-automation/automation_chat.html</code></td></tr>
+    <tr><td>Docs</td><td><code>/mnt/c/Users/appsf/Desktop/AppsForte/services/carrier-automation/docs.html</code></td></tr>
+</table>
+
+<h3>Configuration</h3>
+<table>
+    <tr><th>Variable</th><th>Value</th></tr>
+    <tr><td>CARRIER_USERNAME</td><td>apitest@test.com</td></tr>
+    <tr><td>CARRIER_PASSWORD</td><td>(set in environment)</td></tr>
+    <tr><td>LM_STUDIO_API</td><td>https://api.appsscale.com/v1/chat/completions (via coordinator at port 9999)</td></tr>
+    <tr><td>MODEL_NAME</td><td>qwen3-coder-next-reap-40b-a3b</td></tr>
+</table>
+
+<h3>Dependencies</h3>
+<p>Python 3, Flask, requests, relay_api.py, Relay REST API credentials</p>
+
+<h3>Network</h3>
+<table>
+    <tr><th>Component</th><th>Port</th></tr>
+    <tr><td>API Server</td><td>9500</td></tr>
+    <tr><td>Chat Server</td><td>9800</td></tr>
+    <tr><td>LM Studio</td><td>1234</td></tr>
+    <tr><td>Public URL</td><td>ai.appsscale.com/automationtest/</td></tr>
+</table>
+</div>
+</details>
+
+<!-- 16. TROUBLESHOOTING -->
+<details>
+<summary>16. Troubleshooting</summary>
+<div class="section-body">
+<h3>Services Won't Start</h3>
+<div class="code">journalctl -u carrier-api --no-pager | tail -n 50
+journalctl -u carrier-chat --no-pager | tail -n 50
+ss -tuln | grep -E '(9500|9800)'</div>
+
+<h3>Relay API Connection Issues</h3>
+<div class="code"># Test login
+python3 /mnt/c/Users/appsf/Desktop/AppsForte/services/carrier-automation/scripts/relay_api.py login
+
+# Test context
+python3 /mnt/c/Users/appsf/Desktop/AppsForte/services/carrier-automation/scripts/relay_api.py context</div>
+
+<h3>Order Placement Errors</h3>
+<p>Common Relay API errors:</p>
+<ul>
+    <li><strong>"Index was out of range"</strong> → Missing RecurringDateTime array</li>
+    <li><strong>"Object reference not set"</strong> → Carrier account not fully configured</li>
+    <li><strong>"GetCarrierDriverDetailsById"</strong> → Invalid driver profile</li>
+</ul>
+</div>
+</details>
+
+
+<!-- Password Gate -->
+<div id="authGate" style="position:fixed;inset:0;background:var(--relay-surface);z-index:9999;display:flex;align-items:center;justify-content:center">
+    <div style="background:var(--relay-card);border:1px solid var(--relay-border);border-radius:4px;padding:32px;max-width:380px;width:90%;text-align:center">
+        <div style="font-size:36px;margin-bottom:12px">&#128274;</div>
+        <h2 style="font-family:'Montserrat',sans-serif;font-size:18px;font-weight:600;margin-bottom:6px;color:var(--relay-primary)">Documentation Access</h2>
+        <p style="font-size:13px;color:var(--relay-muted);margin-bottom:20px">Enter the documentation password to continue.</p>
+        <input id="authPass" type="password" placeholder="Password" style="width:100%;padding:8px 12px;border:1px solid var(--relay-border);border-radius:4px;font-size:14px;font-family:'Lato',sans-serif;margin-bottom:12px" autofocus>
+        <div id="authError" style="color:#721c24;font-size:12px;margin-bottom:10px;display:none">Incorrect password. Please try again.</div>
+        <button id="authBtn" style="width:100%;padding:10px;background:linear-gradient(180deg,#0171bb,#005186);color:#fff;border:none;border-radius:4px;font-size:14px;cursor:pointer;font-family:'Lato',sans-serif">Unlock</button>
+    </div>
+</div>
+<script>
+(function(){
+    var KEY='relay_docs_auth';
+    if(sessionStorage.getItem(KEY)==='1'){
+        document.getElementById('authGate').style.display='none';
+        return;
+    }
+    var passEl=document.getElementById('authPass');
+    var errEl=document.getElementById('authError');
+    function check(){
+        if(passEl.value==='Bbcimlr!'){
+            sessionStorage.setItem(KEY,'1');
+            document.getElementById('authGate').style.display='none';
+        } else {
+            errEl.style.display='block';
+            passEl.value='';
+            passEl.focus();
+        }
+    }
+    document.getElementById('authBtn').addEventListener('click',check);
+    passEl.addEventListener('keydown',function(e){if(e.key==='Enter')check();});
+})();
+</script>
+</body>
+</html>

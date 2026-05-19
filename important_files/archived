@@ -1,0 +1,50 @@
+ * Tip: There are .env or .flaskenv files present. Do "pip install python-dotenv" to use them.
+======================================================================
+  Carrier Automation Chat Server
+======================================================================
+
+  This server provides:
+  - Web interface for the AI chat
+  - CORS proxy to Automation API (localhost:5000)
+  - Direct access to automation endpoints
+
+  Chat Interface: http://localhost:9800
+  Automation API: http://localhost:9500
+  LM Studio API: http://localhost:1234/v1/chat/completions
+
+  For Cloudflare Tunnel:
+  1. Install cloudflared: https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation/
+  2. Run: cloudflared tunnel --url http://localhost:9800
+  3. Access via the provided https URL
+
+======================================================================
+
+ * Serving Flask app 'chat_server'
+ * Debug mode: off
+Address already in use
+Port 9800 is in use by another program. Either identify and stop that program, or start the server with a different port.
+ * Tip: There are .env or .flaskenv files present. Do "pip install python-dotenv" to use them.
+======================================================================
+  Carrier Automation Chat Server
+======================================================================
+
+  This server provides:
+  - Web interface for the AI chat
+  - CORS proxy to Automation API (localhost:5000)
+  - Direct access to automation endpoints
+
+  Chat Interface: http://localhost:9800
+  Automation API: http://localhost:9500
+  LM Studio API: http://localhost:1234/v1/chat/completions
+
+  For Cloudflare Tunnel:
+  1. Install cloudflared: https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation/
+  2. Run: cloudflared tunnel --url http://localhost:9800
+  3. Access via the provided https URL
+
+======================================================================
+
+ * Serving Flask app 'chat_server'
+ * Debug mode: off
+Address already in use
+Port 9800 is in use by another program. Either identify and stop that program, or start the server with a different port.

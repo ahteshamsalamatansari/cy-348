@@ -1,0 +1,86 @@
+================================================================================
+  RESTART CLOUDFLARE TUNNEL - ai.appsscale.com/automationtest
+================================================================================
+
+  The Cloudflare tunnel configuration has been updated to route:
+    https://ai.appsscale.com/automationtest/* 
+  → http://192.168.47.119:8080 (Chat Server)
+
+================================================================================
+  WINDOWS INSTRUCTIONS
+================================================================================
+
+  Option 1: Use the batch script
+  ----------------------------
+  1. Open Command Prompt or PowerShell on Windows
+  2. Navigate to: C:\Users\appsf\Desktop\OnRelay\
+  3. Run: restart_cf_tunnel.bat
+
+  Option 2: Manual restart
+  ------------------------
+  1. Open Command Prompt as Administrator
+  2. Kill existing tunnel:
+     taskkill /F /IM cloudflared.exe
+  3. Start tunnel:
+     "C:\Users\appsf\AppData\Local\cloudflared\cloudflared-windows-amd64.exe" tunnel run --config C:\Users\appsf\.cloudflared\config.yml
+
+================================================================================
+  WSL INSTRUCTIONS
+================================================================================
+
+  Start the chat servers:
+  ----------------------
+  cd /OnRelay/skills/carrier-browser-automation
+  ./start_chat.sh
+
+  This starts:
+    - Automation API on port 5000
+    - Chat Server on port 8080
+
+================================================================================
+  VERIFY IT'S WORKING
+================================================================================
+
+  1. Check WSL services:
+     curl http://localhost:8080/api/health
+     curl http://localhost:5000/health
+
+  2. Check from Windows browser:
+     http://192.168.47.119:8080
+
+  3. Check via Cloudflare tunnel:
+     https://ai.appsscale.com/automationtest/
+
+  All should show the chat interface with green status indicators.
+
+================================================================================
+  TROUBLESHOOTING
+================================================================================
+
+  Problem: "Connection refused"
+  Solution: Make sure WSL services are running (./start_chat.sh)
+
+  Problem: "404 Not Found"
+  Solution: Restart Cloudflare tunnel on Windows
+
+  Problem: "Tunnel not starting"
+  Solution: Check cloudflared logs in Windows Event Viewer
+
+  Problem: "Path not accessible"
+  Solution: Verify config.yml has path: /automationtest/* rule
+
+================================================================================
+  CURRENT CONFIGURATION
+================================================================================
+
+  Cloudflare Config: C:\Users\appsf\.cloudflared\config.yml
+  
+  Key Routes:
+    - ai.appsscale.com/automationtest/* → 192.168.47.119:8080
+    - ai.appsscale.com/* → 192.168.47.119:7654 (existing)
+
+  WSL IP: 192.168.47.119
+  Chat Server Port: 8080
+  Automation API Port: 5000
+
+================================================================================

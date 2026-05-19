@@ -1,0 +1,2260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relay On Demand - Carrier Dispatch AI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&family=Montserrat:wght@500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --relay-dark: #0f172a;
+            --relay-primary: #0171bb;
+            --relay-primary-dark: #005186;
+            --relay-accent: #0ea0ff;
+            --relay-success: #28a745;
+            --relay-surface: #f5f6fa;
+            --relay-card: #ffffff;
+            --relay-text: #333333;
+            --relay-muted: #6c757d;
+            --relay-border: #ced4da;
+            --relay-gradient: linear-gradient(180deg, #0171bb, #005186);
+        }
+        body { font-family: 'Lato', sans-serif; background: var(--relay-surface); min-height: 100vh; padding: 20px; color: var(--relay-text); }
+        .container { max-width: 1000px; margin: 0 auto; background: var(--relay-card); border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden; display: flex; flex-direction: column; height: 95vh; }
+
+        /* Header */
+        .header { background: var(--relay-gradient); color: white; padding: 14px 24px; text-align: center; flex-shrink: 0; }
+        .header h1 { font-family: 'Montserrat', sans-serif; font-size: 20px; margin-bottom: 4px; font-weight: 600; letter-spacing: 0; }
+        .header p { font-size: 12px; opacity: 0.8; }
+
+        /* Status Bar */
+        .status-bar { display: flex; justify-content: space-between; padding: 10px 20px; background: var(--relay-surface); border-bottom: 1px solid var(--relay-border); font-size: 12px; flex-shrink: 0; }
+        .status-item { display: flex; align-items: center; gap: 6px; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; }
+        .status-dot.green { background: var(--relay-success); }
+        .status-dot.red { background: #ef4444; }
+        .status-dot.yellow { background: #f59e0b; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+        /* Tool Status */
+        .tool-status { padding: 12px 20px; background: var(--relay-surface); border-bottom: 1px solid var(--relay-border); font-size: 12px; flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; }
+        .tool-status button { padding: 6px 12px; background: linear-gradient(180deg, #0171bb, #005186); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: 400; transition: background 0.15s ease-in-out; }
+        .tool-status button:hover { background: linear-gradient(180deg, #005186, #003d66); }
+        .tool-status button:disabled { background: #adb5bd; cursor: not-allowed; }
+
+        /* Chat Area */
+        .chat-container { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: var(--relay-surface); position: relative; }
+        .messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 15px; }
+
+        /* Message Bubbles */
+        .message { animation: slideIn 0.3s ease; max-width: 85%; }
+        .message.user { align-self: flex-end; }
+        .message.assistant { align-self: flex-start; }
+        .message.system { align-self: center; max-width: 95%; text-align: center; }
+
+        @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .message-header { font-family: 'Montserrat', sans-serif; font-size: 10px; font-weight: 600; margin-bottom: 4px; padding: 3px 8px; border-radius: 4px; display: inline-block; text-transform: uppercase; letter-spacing: 0.5px; }
+        .message.user .message-header { background: #e8f4fd; color: #0171bb; float: right; }
+        .message.assistant .message-header { background: #f8f9fa; color: #495057; }
+        .message.system .message-header { background: #fff3cd; color: #856404; }
+
+        .message-content { clear: both; padding: 12px 16px; border-radius: 4px; font-size: 14px; line-height: 1.6; white-space: pre-wrap; word-wrap: break-word; }
+        .message.user .message-content { background: #e8f4fd; color: #004085; border-left: 3px solid var(--relay-primary); }
+        .message.assistant .message-content { background: var(--relay-card); border: 1px solid var(--relay-border); color: var(--relay-text); }
+        .message.system .message-content { background: #fff3cd; border: 1px solid #ffeeba; color: #856404; font-size: 13px; }
+
+        /* Tool Use Indicator */
+        .tool-use { margin-top: 8px; padding: 8px 12px; background: #e8f4fd; border-radius: 4px; border-left: 3px solid var(--relay-primary); font-size: 12px; }
+        .tool-use-header { font-weight: 700; color: #0171bb; margin-bottom: 4px; }
+        .tool-use-content { font-family: 'Courier New', monospace; font-size: 11px; color: var(--relay-text); white-space: pre-wrap; }
+
+        /* Step log - verbose status in chat */
+        .step-log { align-self: flex-start; max-width: 95%; font-size: 12px; }
+        .step-log .step-line { padding: 3px 10px; color: #616161; font-family: 'Courier New', monospace; display: flex; align-items: center; gap: 6px; }
+        .step-log .step-line .step-icon { flex-shrink: 0; }
+        .step-log .step-line.done { color: #059669; }
+        .step-log .step-line.active { color: #2563eb; font-weight: 600; }
+        .step-log .step-line.error { color: #dc2626; }
+
+        /* Input Area */
+        .input-area { padding: 15px 20px; background: var(--relay-card); border-top: 1px solid var(--relay-border); flex-shrink: 0; }
+        textarea { width: 100%; padding: 8px 12px; border: 1px solid var(--relay-border); border-radius: 4px; font-size: 14px; font-family: inherit; resize: none; height: 70px; transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out; line-height: 1.5; }
+        textarea:focus { outline: none; border-color: var(--relay-accent); box-shadow: 0 0 0 .2rem rgba(14,160,255,.25); }
+        textarea:disabled { background: #e9ecef; cursor: wait; }
+
+        .controls { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
+
+        .suggestions { display: flex; gap: 6px; flex-wrap: wrap; }
+        .suggestion-chip { padding: 5px 12px; background: #fff; color: var(--relay-text); border: 1px solid var(--relay-border); border-radius: 4px; font-size: 11px; cursor: pointer; transition: background 0.15s ease-in-out; }
+        .suggestion-chip:hover { background: var(--relay-primary); color: white; border-color: var(--relay-primary); }
+
+        .send-btn { padding: 10px 24px; background: linear-gradient(180deg, #0171bb, #005186); color: white; border: none; border-radius: 4px; font-size: 14px; font-weight: 400; cursor: pointer; transition: background 0.15s ease-in-out; }
+        .send-btn:hover:not(:disabled) { background: linear-gradient(180deg, #005186, #003d66); }
+        .send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .loading-overlay { display: none; }
+
+        /* Config Panel */
+        .config-panel { padding: 10px 20px; background: var(--relay-surface); border-bottom: 1px solid var(--relay-border); flex-shrink: 0; display: none; }
+        .config-panel.open { display: block; }
+        .config-row { display: flex; gap: 10px; align-items: center; }
+        .config-item { flex: 1; }
+        .config-item label { display: block; font-size: 10px; font-weight: 600; margin-bottom: 4px; color: var(--relay-muted); }
+        .config-item input { width: 100%; padding: 6px 10px; border: 1px solid var(--relay-border); border-radius: 4px; font-size: 12px; height: calc(2.25rem + 2px); }
+        .config-toggle { padding: 8px 16px; background: #fff; border: 1px solid var(--relay-border); border-radius: 4px; cursor: pointer; font-size: 11px; transition: background 0.15s ease-in-out; }
+        .config-toggle:hover { background: #e9ecef; }
+
+        /* API Reference Panel */
+        .api-panel { display:none; position:absolute; top:0; left:0; right:0; bottom:0; background:var(--relay-surface); z-index:10; overflow-y:auto; padding:20px; }
+        .api-panel.open { display:block; }
+        .api-panel-head { display:flex; justify-content:space-between; align-items:center; position:sticky; top:-20px; background:var(--relay-surface); padding:15px 0 10px; z-index:1; border-bottom:1px solid var(--relay-border); margin:-20px -20px 15px; padding:15px 20px 10px; }
+        .api-panel-head h2 { font-family:'Montserrat',sans-serif; font-size:18px; color:var(--relay-dark); margin:0; font-weight:600; }
+        .api-panel-head .api-subtitle { font-size:11px; color:var(--relay-muted); margin-top:2px; }
+        .api-close-btn { padding:6px 16px; background:linear-gradient(180deg,#0171bb,#005186); color:white; border:none; border-radius:4px; cursor:pointer; font-size:12px; font-weight:400; transition:background 0.15s ease-in-out; }
+        .api-close-btn:hover { background:linear-gradient(180deg,#005186,#003d66); }
+        .api-section { margin-bottom:8px; border:1px solid var(--relay-border); border-radius:4px; overflow:hidden; background:var(--relay-card); }
+        .api-section summary { font-family:'Montserrat',sans-serif; padding:10px 15px; background:var(--relay-gradient); color:white; cursor:pointer; font-weight:600; font-size:13px; list-style:none; display:flex; justify-content:space-between; align-items:center; }
+        .api-section summary::-webkit-details-marker { display:none; }
+        .api-section summary::after { content:'\25B6'; font-size:10px; transition:transform 0.2s; }
+        .api-section[open] summary::after { transform:rotate(90deg); }
+        .api-section summary:hover { opacity:0.95; }
+        .api-section-body { padding:12px 15px; font-size:12px; line-height:1.6; }
+        .api-ep { display:grid; grid-template-columns:40px minmax(180px,1fr) 1fr; gap:6px; padding:4px 0; border-bottom:1px solid #f5f5f5; align-items:baseline; }
+        .api-ep:last-child { border-bottom:none; }
+        .api-m { font-family:'Courier New',monospace; font-weight:700; font-size:10px; padding:2px 4px; border-radius:3px; text-align:center; }
+        .api-m.g { background:#ecfdf5; color:#059669; }
+        .api-m.p { background:#eff6ff; color:#2563eb; }
+        .api-p { font-family:'Courier New',monospace; color:#333; font-size:11px; word-break:break-all; }
+        .api-d { color:#757575; font-size:11px; }
+        .api-note { background:#fff3cd; padding:10px 14px; border-radius:4px; margin:8px 0; font-size:11px; color:#856404; border-left:3px solid #ffc107; line-height:1.6; }
+        .api-note code { background:#ffeeba; padding:1px 4px; border-radius:2px; font-size:10px; }
+        .api-code { background:#f8f9fa; padding:10px 14px; border-radius:4px; margin:8px 0; font-family:'Courier New',monospace; font-size:11px; white-space:pre-wrap; overflow-x:auto; line-height:1.5; border:1px solid #ced4da; }
+        .api-field { display:grid; grid-template-columns:180px 60px 1fr; gap:6px; padding:2px 0; border-bottom:1px solid #f5f5f5; align-items:baseline; font-size:11px; }
+        .api-field:last-child { border-bottom:none; }
+        .api-fn { font-family:'Courier New',monospace; font-weight:600; color:#2563eb; }
+        .api-ft { color:var(--relay-muted); font-style:italic; }
+        .api-fd { color:var(--relay-muted); }
+        .api-enum { display:grid; grid-template-columns:30px 120px 1fr; gap:6px; padding:2px 0; font-size:11px; }
+        .api-ev { font-family:'Courier New',monospace; font-weight:600; color:#333; }
+        .api-en { color:#2563eb; }
+        .api-ed { color:var(--relay-muted); }
+        .api-workflow-step { display:flex; gap:10px; padding:8px 0; border-bottom:1px solid #f0f0f0; }
+        .api-workflow-step:last-child { border-bottom:none; }
+        .api-step-num { width:24px; height:24px; background:var(--relay-gradient); color:white; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; flex-shrink:0; }
+        .api-step-content { font-size:12px; line-height:1.5; }
+        .api-step-content code { background:#f5f5f5; padding:1px 4px; border-radius:2px; font-size:11px; }
+        .api-docs-btn { padding:6px 12px; background:#e8f4fd; color:#0171bb; border:1px solid #b8daff; border-radius:4px; cursor:pointer; font-size:11px; font-weight:400; transition:background 0.15s ease-in-out; }
+        .api-docs-btn:hover { background:#cce5ff; }
+        /* ---- Live reasoning stream ---- */
+        .think-live{background:#fff3cd;border-left:4px solid #ffc107;padding:8px 12px;margin-bottom:8px;border-radius:4px;font-size:12px;color:#856404;white-space:pre-wrap;line-height:1.5;max-height:200px;overflow-y:auto}
+        .think-live .think-label{font-weight:600;margin-bottom:4px;display:block}
+        .think-done{background:#f8f9fa;border-left:4px solid #dee2e6;padding:6px 12px;margin-bottom:8px;border-radius:4px;font-size:11px;color:#6c757d;cursor:pointer;max-height:28px;overflow:hidden;transition:max-height 0.3s}
+        .think-done.expanded{max-height:200px;overflow-y:auto;white-space:pre-wrap;line-height:1.4}
+        .think-done .think-label{font-weight:600}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Relay On Demand</h1>
+            <p>Carrier Dispatch AI Assistant</p>
+        </div>
+
+        <div class="status-bar">
+            <div class="status-item">
+                <span class="status-dot" id="lmStatusDot"></span>
+                <span id="lmStatusText">Checking AI Engine...</span>
+            </div>
+            <div class="status-item">
+                <span class="status-dot" id="apiStatusDot"></span>
+                <span id="apiStatusText">Checking Relay API...</span>
+            </div>
+            <button class="config-toggle" onclick="toggleConfig()">Config</button>
+        </div>
+
+        <div class="config-panel" id="configPanel">
+            <div class="config-row">
+                <div class="config-item" style="flex: 2;">
+                    <label>Automation API (leave empty for default)</label>
+                    <input type="text" id="automationApiUrl" value="" placeholder="Uses server proxy by default">
+                </div>
+                <div class="config-item">
+                    <label>&nbsp;</label>
+                    <button onclick="testConnections()" style="padding:6px 12px;background:var(--relay-primary);color:white;border:none;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;">Test Connections</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="tool-status">
+            <div>
+                <strong>Mode:</strong> <span id="apiMode">Direct API</span> |
+                <strong>Carrier:</strong> <span id="carrierName">Loading...</span> |
+                <strong>Form Types:</strong> <span id="formTypeCount">4</span>
+            </div>
+            <div style="display:flex;gap:6px;">
+                <button onclick="loadContext()" id="refreshBtn">Refresh</button>
+                <button class="api-docs-btn" onclick="toggleDocsPanel()">Docs</button>
+                <button class="api-docs-btn" onclick="toggleApiPanel()">API Docs</button>
+                <a href="/automationtest/docs" target="_blank" class="api-docs-btn" style="text-decoration:none;display:inline-flex;align-items:center">Full Documentation</a>
+            </div>
+        </div>
+
+        <div class="chat-container">
+            <!-- ==================== DOCS PANEL ==================== -->
+            <div class="api-panel" id="docsPanel">
+                <div class="api-panel-head">
+                    <div>
+                        <h2>System Documentation</h2>
+                        <div class="api-subtitle">Complete guide to the Carrier Automation AI Assistant</div>
+                    </div>
+                    <button class="api-close-btn" onclick="toggleDocsPanel()">Close</button>
+                </div>
+
+                <!-- 1. System Overview -->
+                <details class="api-section" open>
+                    <summary>System Overview</summary>
+                    <div class="api-section-body">
+                        <p>This is an <strong>AI-powered carrier dispatch assistant</strong> for <strong>Relay On Demand</strong>. It lets carriers place orders, manage drivers, and view order status by chatting in natural language. The AI model understands 4 form types and automatically selects the right one based on what the user says.</p>
+                        <br>
+                        <strong style="color:#2563eb;">What It Does</strong>
+                        <ul style="margin:6px 0 6px 20px;font-size:12px;line-height:1.8;">
+                            <li>Place dispatch orders via natural language chat (no forms to fill)</li>
+                            <li>Automatically select the correct form type (Quick Entry, Smart Wizard, Classic Entry, Multi-Driver Blocks)</li>
+                            <li>Query orders, drivers, dashboard data via conversational commands</li>
+                            <li>Validate inputs and ask for missing info before submitting</li>
+                            <li>Stream AI responses token-by-token for fast feedback</li>
+                        </ul>
+                        <strong style="color:#2563eb;">Key URLs</strong>
+                        <div class="api-code">Chat Interface:  https://ai.appsscale.com/automationtest/
+Smart Filter:    https://ai.appsscale.com/filter.html
+Local Chat:      http://localhost:9800/automationtest/
+Local API:       http://localhost:9500
+LM Studio:       https://api.appsscale.com/v1/chat/completions
+Relay API:       https://ar3lay0pndm4ndi.relayondemand.com/relayapi/api/</div>
+                    </div>
+                </details>
+
+                <!-- 2. Architecture -->
+                <details class="api-section">
+                    <summary>Architecture &amp; Service Flow</summary>
+                    <div class="api-section-body">
+                        <p>The system has a <strong>3-tier architecture</strong> with a Cloudflare tunnel for public access:</p>
+                        <div class="api-code">User Browser
+  |
+  |  HTTPS (Cloudflare Tunnel)
+  v
+ai.appsscale.com  ----cloudflared----> WSL (192.168.47.119)
+  |                                         |
+  |  /automationtest/*                      |
+  |  /api/automation/chat, /api/v2/*                   |
+  v                                         v
+chat_server.py (Port 9800)            LM Studio (Port 1234)
+  |  Flask web server                   via api.appsscale.com
+  |  Serves HTML, proxies all API calls
+  |
+  |  /api/v2/* proxied to:
+  v
+api_server.py (Port 9500)
+  |  Flask API server
+  |  v1 = Playwright browser automation (legacy)
+  |  v2 = Direct HTTP API calls (current)
+  |
+  |  Uses:
+  v
+relay_api.py (RelayAPI class)
+  |  Direct HTTP client
+  |  Session-based auth with Bearer token
+  v
+Relay On Demand REST API
+  https://ar3lay0pndm4ndi.relayondemand.com/relayapi/api/</div>
+                        <br>
+                        <strong style="color:#2563eb;">Request Flow for Chat Messages</strong>
+                        <div class="api-code">1. User types message in browser
+2. Frontend JS detects intent (regex matching)
+3. Direct intents (orders, drivers, form_info) → bypass LLM, call API directly
+4. Chat/order intents → send to LLM via POST /api/automation/chat (SSE streaming)
+5. chat_server.py proxies to LM Studio API with model name injected
+6. LLM response streams back token-by-token
+7. Frontend checks response for ORDER_DATA: or API_ACTION: commands
+8. If ORDER_DATA found → validate → POST /api/v2/place-order
+9. If API_ACTION found → execute action → display results
+10. api_server.py uses relay_api.py to call Relay REST API directly</div>
+                        <br>
+                        <strong style="color:#2563eb;">Request Flow for Order Placement</strong>
+                        <div class="api-code">1. User: "Send a driver to 123 Main St, flat rate $150"
+2. Intent detected: place_order → sent to LLM
+3. LLM outputs: ORDER_DATA: {"start_address":"123 Main St","flat_amount":"150",...}
+4. Frontend JS parses ORDER_DATA, fills defaults for missing fields
+5. Frontend validates: address present? driver ID for classic entry?
+6. POST /api/v2/place-order with order JSON
+7. chat_server.py proxies to api_server.py:9500
+8. api_server.py calls relay_api.build_order_data() to map fields
+9. relay_api.py calls POST PlaceOrder/NewOrder on Relay API
+10. Result returned → displayed in chat</div>
+                    </div>
+                </details>
+
+                <!-- 3. LM Studio -->
+                <details class="api-section">
+                    <summary>LM Studio API (AI Engine)</summary>
+                    <div class="api-section-body">
+                        <p>The AI engine runs on <strong>LM Studio</strong> on a local machine, exposed via Cloudflare tunnel as <code>api.appsscale.com</code>.</p>
+                        <br>
+                        <strong style="color:#2563eb;">Configuration</strong>
+                        <div class="api-code">Endpoint:  https://api.appsscale.com/v1/chat/completions
+Local:     http://localhost:1234/v1/chat/completions
+Model:     unsloth/qwen3.5-35b-a3b
+Format:    OpenAI-compatible API (same request/response format)</div>
+                        <br>
+                        <strong style="color:#2563eb;">How It's Used</strong>
+                        <p style="font-size:12px;line-height:1.6;">The chat_server.py (port 9800) acts as a proxy. When the frontend calls <code>POST /api/automation/chat</code>, the server injects the <code>MODEL_NAME</code> into the payload and forwards it to the LM Studio API. This hides the model name from the browser client.</p>
+                        <br>
+                        <strong style="color:#2563eb;">Streaming</strong>
+                        <p style="font-size:12px;line-height:1.6;">When <code>stream: true</code> is set in the request, the server uses Server-Sent Events (SSE) to stream tokens back. Each chunk is a <code>data:</code> line with a JSON object containing <code>choices[0].delta.content</code>. The frontend reads these via <code>ReadableStream</code> and appends text to the message bubble in real-time.</p>
+                        <br>
+                        <strong style="color:#2563eb;">Request Format</strong>
+                        <div class="api-code">{
+  "messages": [
+    {"role": "system", "content": "You are a carrier dispatch assistant..."},
+    {"role": "user", "content": "Send a driver to 123 Main St"}
+  ],
+  "temperature": 0.3,
+  "max_tokens": 16000,
+  "stream": true
+}</div>
+                        <br>
+                        <strong style="color:#2563eb;">Think Tags</strong>
+                        <p style="font-size:12px;line-height:1.6;">The Qwen 3 model outputs <code>&lt;think&gt;...&lt;/think&gt;</code> reasoning blocks. The frontend detects these during streaming and shows "Thinking..." until the <code>&lt;/think&gt;</code> tag appears, then displays only the text after it.</p>
+                    </div>
+                </details>
+
+                <!-- 4. Chat Server -->
+                <details class="api-section">
+                    <summary>Chat Server (chat_server.py &mdash; Port 9800)</summary>
+                    <div class="api-section-body">
+                        <p>Flask web server that serves the frontend HTML and proxies all API calls. This is the <strong>only server exposed to the internet</strong> via the Cloudflare tunnel.</p>
+                        <br>
+                        <strong style="color:#2563eb;">What It Serves</strong>
+                        <div class="api-code">GET  /                         → automation_chat.html
+GET  /automationtest/          → automation_chat.html (no-cache headers)
+GET  /automation_chat.html     → automation_chat.html
+GET  /filter.html              → filter.html (Smart Filter UI)</div>
+                        <br>
+                        <strong style="color:#2563eb;">LLM Proxy</strong>
+                        <div class="api-code">POST /api/automation/chat     → LM Studio API (injects MODEL_NAME, supports streaming)
+POST /api/automation/chat/vl   → Vision-Language mode (screenshot + DOM context)</div>
+                        <p style="font-size:12px;margin-top:6px;">The <code>/api/automation/chat</code> endpoint adds the model name server-side so the frontend never sees it. It supports both streaming (SSE) and non-streaming modes.</p>
+                        <br>
+                        <strong style="color:#2563eb;">v2 API Proxies (to api_server.py:9500)</strong>
+                        <div class="api-code">POST /api/v2/login              → POST api_server:9500/api/v2/login
+GET  /api/v2/context            → GET  api_server:9500/api/v2/context
+GET  /api/v2/form-types         → GET  api_server:9500/api/v2/form-types
+GET  /api/v2/reference-data     → GET  api_server:9500/api/v2/reference-data
+POST /api/v2/estimate           → POST api_server:9500/api/v2/estimate
+POST /api/v2/place-order        → POST api_server:9500/api/v2/place-order
+GET  /api/v2/orders?type=       → GET  api_server:9500/api/v2/orders
+GET  /api/v2/orders/{id}        → GET  api_server:9500/api/v2/orders/{id}
+POST /api/v2/orders/{id}/cancel → POST api_server:9500/api/v2/orders/{id}/cancel
+GET  /api/v2/drivers?type=      → GET  api_server:9500/api/v2/drivers
+GET  /api/v2/quick-orders       → GET  api_server:9500/api/v2/quick-orders
+GET  /api/v2/multi-driver-blocks→ GET  api_server:9500/api/v2/multi-driver-blocks
+GET  /api/v2/dashboard          → GET  api_server:9500/api/v2/dashboard</div>
+                        <br>
+                        <strong style="color:#2563eb;">Legacy Browser Automation Proxies (to api_server.py:9500)</strong>
+                        <div class="api-code">GET  /api/analyze           → Playwright page analysis
+POST /api/fill              → Fill form fields
+POST /api/navigate          → Navigate to URL
+POST /api/click             → Click element
+GET  /api/screenshot        → Take screenshot
+POST /api/submit            → Click submit button
+POST /api/expand_optional   → Expand optional section
+POST /api/get_dropdown_options → Get dropdown options</div>
+                        <br>
+                        <strong style="color:#2563eb;">Smart Filter API</strong>
+                        <div class="api-code">POST /api/filter      → Analyze message for contact info / circumvention
+GET  /api/filter/docs → Filter API documentation (JSON)</div>
+                        <br>
+                        <strong style="color:#2563eb;">Configuration (chat_server.py line 22-24)</strong>
+                        <div class="api-code">LM_STUDIO_API  = "https://api.appsscale.com/v1/chat/completions"
+AUTOMATION_API = "http://localhost:9500"
+MODEL_NAME     = "unsloth/qwen3.5-35b-a3b"</div>
+                    </div>
+                </details>
+
+                <!-- 5. API Server -->
+                <details class="api-section">
+                    <summary>API Server (api_server.py &mdash; Port 9500)</summary>
+                    <div class="api-section-body">
+                        <p>Flask API server providing two sets of endpoints:</p>
+                        <ul style="margin:6px 0 6px 20px;font-size:12px;line-height:1.8;">
+                            <li><strong>/api/*</strong> (v1) &mdash; Playwright browser automation (legacy, slower but handles any page)</li>
+                            <li><strong>/api/v2/*</strong> &mdash; Direct HTTP API calls via relay_api.py (fast, reliable, current)</li>
+                        </ul>
+                        <br>
+                        <strong style="color:#2563eb;">Relay API Authentication</strong>
+                        <p style="font-size:12px;line-height:1.6;">The server maintains a <strong>single shared RelayAPI instance</strong> (<code>_relay_api</code>) that auto-authenticates on first request. Authentication uses <code>CARRIER_USERNAME</code> / <code>CARRIER_PASSWORD</code> environment variables (defaults to test account). A thread lock (<code>_relay_api_lock</code>) ensures thread-safe access.</p>
+                        <br>
+                        <strong style="color:#2563eb;">v2 Order Placement (POST /api/v2/place-order)</strong>
+                        <p style="font-size:12px;line-height:1.6;">Accepts either <strong>simplified field names</strong> (lowercase, snake_case from the LLM) or <strong>raw Relay API field names</strong> (PascalCase). If <code>start_address</code> is present, it calls <code>relay_api.build_order_data()</code> to map simplified names to the full Relay API payload (~55 fields). The <code>form_type</code> field controls which flags get set:</p>
+                        <div class="api-code">form_type="quick_entry"   → IsOrderCreatedFromNewFlow=true, FromSmartWizard=false
+form_type="smart_wizard"  → IsOrderCreatedFromNewFlow=true, FromSmartWizard=true
+form_type="classic_entry" → CarrierDriverID and CarrierDriverName required</div>
+                        <br>
+                        <strong style="color:#2563eb;">Simplified → Relay API Field Mapping</strong>
+                        <div class="api-code">start_address       → StartAddress
+destination_address → DestinationAddress
+when_want_driver    → WhenYouWantDriver ("0"/"1"/"2")
+driver_pay_type     → DriverPayType ("0"-"4")
+driver_book_duration→ DriverBookDurations
+flat_amount         → FlatAmount
+hourly_amount       → HourlyFlatAmount
+per_load_amount     → PerLoadAmount
+per_mile_amount     → PerMileAmount
+per_week_amount     → PerWeekAmount
+trailer_type_id     → TrailerTypeID
+truck_unit_number   → TruckUnitNumber
+trailer_number      → TrailerNumber
+special_notes       → SpecialNotes
+internal_notes      → InternalNotes
+schedule_time       → ScheduleTime
+carrier_driver_id   → CarrierDriverID
+carrier_driver_name → CarrierDriverName
+schedule_date       → ScheduleDate
+start_task_id       → StartAddressTaskID
+end_task_id         → EndAddressTaskID</div>
+                    </div>
+                </details>
+
+                <!-- 6. Relay API Client -->
+                <details class="api-section">
+                    <summary>Relay API Client (relay_api.py)</summary>
+                    <div class="api-section-body">
+                        <p>Python class <code>RelayAPI</code> that makes direct HTTP calls to the Relay On Demand REST API. This was reverse-engineered from the Angular JS bundles of the carrier website.</p>
+                        <br>
+                        <strong style="color:#2563eb;">Discovery</strong>
+                        <p style="font-size:12px;line-height:1.6;">The Relay REST API was discovered by analyzing two JavaScript bundle files from <code>https://carrier.relayondemand.com/Carrier/</code>:</p>
+                        <div class="api-code">main.95acff2d97c0e868eca2.bundle.js    (1.0 MB) - Core app, auth, services
+0.267e3fe7d8f30548a65f.chunk.js       (2.4 MB) - Lazy-loaded ClientModule</div>
+                        <p style="font-size:12px;line-height:1.6;margin-top:6px;">This revealed <strong>144 REST API endpoints</strong>, the full PlaceOrder/NewOrder data model (~55 fields), enum values, and SignalR hub definitions. All form types (Quick Entry, Smart Wizard, Classic Entry) submit to the <strong>same single endpoint</strong>: <code>POST PlaceOrder/NewOrder</code>.</p>
+                        <br>
+                        <strong style="color:#2563eb;">Authentication</strong>
+                        <div class="api-code">Base URL: https://ar3lay0pndm4ndi.relayondemand.com/relayapi/api/
+Login:    POST User/CarrierLogin { Email, Password }
+Token:    Returned in response.Data.AuthToken
+Header:   AuthToken: Bearer &lt;token&gt;  (on ALL subsequent requests)
+Storage:  localStorage["ClientAuthToken"] (in the web app)</div>
+                        <br>
+                        <strong style="color:#2563eb;">Key Methods</strong>
+                        <div class="api-code">api.login(email, password)     → Authenticate, store token
+api.get_form_context()         → Full LLM context (forms + reference data + carrier)
+api.build_order_data(...)      → Map simplified params to full Relay API payload
+api.place_order(order_data)    → Submit order via POST PlaceOrder/NewOrder
+api.get_current_orders()       → Active "Now" orders
+api.get_scheduled_orders()     → Scheduled orders
+api.get_order_detail(id)       → Full order detail
+api.cancel_order(id, reason)   → Cancel an order
+api.get_carrier_drivers()      → Own fleet drivers
+api.get_preferred_drivers()    → Preferred relay drivers
+api.get_quick_orders()         → Quick order templates
+api.get_multi_driver_blocks()  → Multi driver blocks
+api.get_task_types()           → Task types (pickup/dropoff)
+api.get_trailer_types()        → Trailer types
+api.get_endorsement_types()    → Endorsement types
+api.get_carrier_detail()       → Carrier profile
+api.get_dashboard_counts()     → Dashboard stats</div>
+                        <br>
+                        <strong style="color:#2563eb;">Reference Data Caching</strong>
+                        <p style="font-size:12px;line-height:1.6;">Task types, trailer types, and endorsement types are cached in-memory after the first fetch. Use <code>force_refresh=True</code> to bypass cache.</p>
+                    </div>
+                </details>
+
+                <!-- 7. Frontend Chat Interface -->
+                <details class="api-section">
+                    <summary>Frontend: Chat Interface (automation_chat.html)</summary>
+                    <div class="api-section-body">
+                        <p>Single-page HTML/JS application that provides the chat UI. No build tools, no framework &mdash; pure vanilla JavaScript.</p>
+                        <br>
+                        <strong style="color:#2563eb;">Page Structure</strong>
+                        <div class="api-code">Header          → Title + subtitle
+Status Bar      → AI Engine status + Relay API status + Config/Docs/API Docs buttons
+Config Panel    → Editable API URL + test button (hidden by default)
+Tool Status Bar → Mode + Carrier Name + Form Type count + Refresh/Docs buttons
+Docs Panel      → This documentation (overlay, hidden by default)
+API Docs Panel  → REST API reference (overlay, hidden by default)
+Chat Messages   → Scrollable message area with user/assistant/system bubbles
+Step Log        → Verbose processing steps (Intent, Loading, Streaming, etc.)
+Input Area      → Text input + suggestion chips + Send button</div>
+                        <br>
+                        <strong style="color:#2563eb;">State Variables (JavaScript)</strong>
+                        <div class="api-code">CHAT_HISTORY    → Array of {role, content} messages (last 8 sent to LLM)
+API_CONTEXT     → Cached context from /api/v2/context (form types, reference data, carrier)
+isConnectedLM   → Boolean: AI engine reachable
+isConnectedAPI  → Boolean: Relay API reachable</div>
+                        <br>
+                        <strong style="color:#2563eb;">On Page Load</strong>
+                        <div class="api-code">1. testConnections()  → Ping /api/automation/chat (AI) and /api/v2/form-types (Relay API)
+2. loadContext()      → GET /api/v2/context → cache carrier name, form types, reference data</div>
+                        <br>
+                        <strong style="color:#2563eb;">Message Flow</strong>
+                        <div class="api-code">sendMessage()
+  ├── detectIntent(message)     → Classify user message
+  ├── if "view_orders"          → GET /api/v2/orders → formatOrderResponse()
+  ├── if "drivers"              → GET /api/v2/drivers → formatDriverResponse()
+  ├── if "form_info"            → formatFormTypes() (static text)
+  ├── else                      → Build system prompt → callLLMStream()
+  │     ├── Parse ORDER_DATA:   → validate → POST /api/v2/place-order
+  │     └── Parse API_ACTION:   → executeAPIAction() → format results
+  └── Push to CHAT_HISTORY</div>
+                        <br>
+                        <strong style="color:#2563eb;">Streaming Implementation</strong>
+                        <p style="font-size:12px;line-height:1.6;"><code>callLLMStream()</code> uses <code>fetch()</code> with a <code>ReadableStream</code> reader. It reads SSE lines (<code>data: {...}</code>), parses JSON, extracts <code>choices[0].delta.content</code>, appends to <code>fullText</code>, and updates the message bubble. Think tags are handled: while inside <code>&lt;think&gt;</code> block, display shows "Thinking...". After <code>&lt;/think&gt;</code>, only post-think text is shown.</p>
+                    </div>
+                </details>
+
+                <!-- 8. Intent Detection -->
+                <details class="api-section">
+                    <summary>Intent Detection System</summary>
+                    <div class="api-section-body">
+                        <p>The <code>detectIntent(message)</code> function classifies user messages using regex patterns. Direct data intents bypass the LLM entirely for faster response.</p>
+                        <br>
+                        <strong style="color:#2563eb;">Intent Priority Order (top wins)</strong>
+                        <div class="api-code">1. form_info       → /form.?type|what.*form|explain.*form|options/
+                      Action: Show static form type descriptions (no LLM)
+
+2. place_order     → /dispatch|send.*driver|place.*order|create.*order|new.*order/
+                      Action: Send to LLM with system prompt
+
+3. smart_wizard    → /wizard|step.by.step|guide|help.*plac/
+                      Action: Send to LLM (model outputs ORDER_DATA with smart_wizard)
+
+4. multi_driver_blocks → /block|multi.*driver|recurring|weekly.*block/
+                      Action: Send to LLM (model explains MDB)
+
+5. classic_entry   → /classic|assign.*my.*driver|own.*driver|fleet/
+                      Action: Send to LLM (model asks for driver ID)
+
+6. view_orders     → /(current|my|active|show|list).*orders?/
+                      Action: GET /api/v2/orders (no LLM)
+
+7. cancel_order    → /cancel.*(order|dispatch)/
+                      Action: Send to LLM
+
+8. order_detail    → /order.*(detail|#|\d{3,})/
+                      Action: Send to LLM
+
+9. drivers         → /(show|list|available|preferred|my).*drivers?/
+                      Action: GET /api/v2/drivers (no LLM)
+
+10. form_info (2)  → /how.*(order|dispatch|place)/
+                      Action: Show static form type descriptions
+
+11. legacy         → /analyze|screenshot|page|navigate/
+                      Action: Send to LLM (browser automation)
+
+12. chat (default) → Everything else
+                      Action: Send to LLM</div>
+                        <div class="api-note"><strong>Why form_info is checked BEFORE place_order:</strong> "What form types can I use to place an order?" would otherwise match "place.*order" and go to the LLM instead of showing the static form info.</div>
+                    </div>
+                </details>
+
+                <!-- 9. LLM System Prompt -->
+                <details class="api-section">
+                    <summary>LLM System Prompt &amp; Command Tags</summary>
+                    <div class="api-section-body">
+                        <p>The <code>buildSystemPrompt()</code> function constructs a detailed system prompt that tells the LLM how to respond. It includes output format rules, required fields, form type selection logic, examples, and dynamically-loaded reference data.</p>
+                        <br>
+                        <strong style="color:#2563eb;">Output Commands</strong>
+                        <p style="font-size:12px;line-height:1.6;">The LLM communicates actions via two special tags that the frontend regex-parses:</p>
+                        <div class="api-code">ORDER_DATA: {"start_address":"...","form_type":"quick_entry",...}
+  → Frontend parses JSON, validates, calls POST /api/v2/place-order
+
+API_ACTION: {"action":"view_orders"}
+  → Frontend calls executeAPIAction(), displays formatted results</div>
+                        <br>
+                        <strong style="color:#2563eb;">Rules Enforced by Prompt</strong>
+                        <ul style="margin:6px 0 6px 20px;font-size:12px;line-height:1.8;">
+                            <li>ORDER_DATA must be on a SINGLE line (no line breaks in JSON)</li>
+                            <li>All JSON values must be strings (quoted)</li>
+                            <li>No markdown code blocks around JSON</li>
+                            <li>All 6 required fields must be present</li>
+                            <li>Never submit ORDER_DATA without start_address</li>
+                            <li>Never submit classic_entry without carrier_driver_id</li>
+                            <li>If user just says "place an order" with no details, ask for pickup address</li>
+                        </ul>
+                        <br>
+                        <strong style="color:#2563eb;">6 Required Fields</strong>
+                        <div class="api-code">1. start_address       Pickup address (must not be empty)
+2. destination_address  Drop-off address ("" if not specified)
+3. when_want_driver     "0"=exact date/time, "1"=timeframe, "2"=not sure
+4. driver_pay_type      "0"=flat, "1"=hourly, "2"=weekly, "3"=per load, "4"=per mile
+5. driver_book_duration Hours as string (e.g. "2")
+6. form_type            "quick_entry" | "smart_wizard" | "classic_entry"</div>
+                        <br>
+                        <strong style="color:#2563eb;">Dynamic Context Injection</strong>
+                        <p style="font-size:12px;line-height:1.6;">If <code>API_CONTEXT</code> is loaded (from <code>/api/v2/context</code>), the prompt appends:</p>
+                        <ul style="margin:6px 0 6px 20px;font-size:12px;line-height:1.8;">
+                            <li><strong>Task Types</strong> &mdash; List of DefaultParameterID + name + hours (for start_task_id / end_task_id)</li>
+                            <li><strong>Trailer Types</strong> &mdash; List of TrailerTypeID + name</li>
+                            <li><strong>Endorsement Types</strong> &mdash; List of EndorsementID + type</li>
+                            <li><strong>Carrier Name</strong> &mdash; Current carrier identity</li>
+                        </ul>
+                        <br>
+                        <strong style="color:#2563eb;">Available API_ACTION Actions</strong>
+                        <div class="api-code">view_orders              → GET /api/v2/orders?type=now
+view_scheduled_orders    → GET /api/v2/orders?type=scheduled
+view_all_orders          → GET /api/v2/orders?type=all
+view_order_detail        → GET /api/v2/orders/{id}  (params.order_id)
+cancel_order             → POST /api/v2/orders/{id}/cancel  (params.order_id, params.reason)
+view_drivers             → GET /api/v2/drivers?type=own
+view_preferred_drivers   → GET /api/v2/drivers?type=preferred
+view_active_drivers      → GET /api/v2/drivers?type=active
+view_quick_orders        → GET /api/v2/quick-orders
+view_multi_driver_blocks → GET /api/v2/multi-driver-blocks
+estimate                 → POST /api/v2/estimate  (params.start_address, params.destination_address)
+view_dashboard           → GET /api/v2/dashboard</div>
+                    </div>
+                </details>
+
+                <!-- 10. Form Types -->
+                <details class="api-section">
+                    <summary>Form Types In Detail</summary>
+                    <div class="api-section-body">
+                        <strong style="color:#2563eb;">1. Quick Entry (Default)</strong>
+                        <div class="api-code">Trigger words: "send a driver", "dispatch", "quick", or just an address
+API flags:     IsOrderCreatedFromNewFlow=true, FromSmartWizard=false
+form_type:     "quick_entry"
+Fields:        start_address, destination_address, when_want_driver,
+               driver_pay_type, pay amount, driver_book_duration
+Use case:      Simple dispatches with minimal detail</div>
+                        <br>
+                        <strong style="color:#2563eb;">2. Smart Wizard</strong>
+                        <div class="api-code">Trigger words: "help me", "guide me", "wizard", "step by step",
+               or detailed info (destination + trailer + schedule + pay)
+API flags:     IsOrderCreatedFromNewFlow=true, FromSmartWizard=true
+form_type:     "smart_wizard"
+Fields:        All Quick Entry fields PLUS trailer_type_id, schedule_time,
+               endorsement types, additional stops
+Use case:      Complex orders, per-mile/per-load pricing, reefer/flatbed
+Note:          If user says "guide me" but provides ALL details in one message,
+               the LLM outputs ORDER_DATA immediately (no follow-up questions)</div>
+                        <br>
+                        <strong style="color:#2563eb;">3. Classic Entry</strong>
+                        <div class="api-code">Trigger words: "my driver", "assign to [name]", "our driver", "fleet"
+API flags:     CarrierDriverID and CarrierDriverName required
+form_type:     "classic_entry"
+Extra fields:  carrier_driver_id, carrier_driver_name, schedule_date
+Use case:      Assign order to your own fleet driver (not a Relay network driver)
+Validation:    Frontend blocks submission if carrier_driver_id is empty,
+               fetches driver list and asks user to pick one</div>
+                        <br>
+                        <strong style="color:#2563eb;">4. Multi-Driver Blocks</strong>
+                        <div class="api-code">Trigger words: "block", "multi driver", "recurring", "weekly block"
+API endpoint:  POST PlaceOrder/NewRelayFromMultiDriverBlock/{blockId}
+No form_type:  (not submitted via ORDER_DATA)
+Use case:      Create orders from pre-booked recurring driver blocks
+Flow:          LLM explains MDB → shows existing blocks via API_ACTION →
+               user selects block → LLM creates relay from block</div>
+                    </div>
+                </details>
+
+                <!-- 11. Frontend Validation -->
+                <details class="api-section">
+                    <summary>Frontend Validation &amp; Defaults</summary>
+                    <div class="api-section-body">
+                        <p>Three layers of validation ensure no bad data reaches the Relay API:</p>
+                        <br>
+                        <strong style="color:#2563eb;">Layer 1: LLM Prompt Rules</strong>
+                        <p style="font-size:12px;line-height:1.6;">The system prompt instructs the model to never output ORDER_DATA without a start_address, and to ask for missing info. This works ~90% of the time.</p>
+                        <br>
+                        <strong style="color:#2563eb;">Layer 2: Frontend JavaScript Defaults</strong>
+                        <p style="font-size:12px;line-height:1.6;">After parsing ORDER_DATA, the frontend fills missing required fields with defaults:</p>
+                        <div class="api-code">when_want_driver:    "0" if schedule_date/time present, else "2"
+driver_pay_type:     "0" (flat rate)
+driver_book_duration:"2" (2 hours)
+form_type:           "quick_entry"
+destination_address: "" (empty string)
+
+Pay amount auto-fill:
+  driver_pay_type "0" → flat_amount (default "0")
+  driver_pay_type "1" → hourly_amount (default "0")
+  driver_pay_type "2" → per_week_amount (default "0")
+  driver_pay_type "3" → per_load_amount (default "0")
+  driver_pay_type "4" → per_mile_amount (default "0")</div>
+                        <br>
+                        <strong style="color:#2563eb;">Layer 3: Frontend Validation Checks</strong>
+                        <div class="api-code">Classic Entry without driver ID:
+  → Fetches driver list from /api/v2/drivers?type=own
+  → Displays numbered list: "1. John Smith (ID: 3408)"
+  → Asks user to pick a driver
+  → Does NOT submit ORDER_DATA
+
+Missing pickup address (empty start_address):
+  → Shows: "I need a pickup address to place the order."
+  → Does NOT submit ORDER_DATA</div>
+                    </div>
+                </details>
+
+                <!-- 12. Smart Filter -->
+                <details class="api-section">
+                    <summary>Smart Filter (filter.html)</summary>
+                    <div class="api-section-body">
+                        <p>A separate tool at <code>/filter.html</code> that uses the same Qwen 3 model to detect contact information or platform circumvention in messages.</p>
+                        <br>
+                        <strong style="color:#2563eb;">Access</strong>
+                        <div class="api-code">UI:  https://ai.appsscale.com/filter.html
+API: POST https://ai.appsscale.com/api/filter
+Docs: GET https://ai.appsscale.com/api/filter/docs</div>
+                        <br>
+                        <strong style="color:#2563eb;">API Request</strong>
+                        <div class="api-code">POST /api/filter
+{
+  "message": "Call me at five oh five 867 5309",
+  "context": ["previous message 1", "previous message 2"]  // optional
+}</div>
+                        <br>
+                        <strong style="color:#2563eb;">API Response</strong>
+                        <div class="api-code">{
+  "safe": false,
+  "category": "PHONE",       // CLEAN | PHONE | EMAIL | SOCIAL | CIRCUMVENTION
+  "reason": "Phone number detected: 505-867-5309"
+}</div>
+                        <p style="font-size:12px;line-height:1.6;margin-top:6px;">The filter uses the same <code>MODEL_NAME</code> and <code>LM_STUDIO_API</code> as the chat. It sends a specialized system prompt that instructs the model to analyze messages for contact info. Context-aware: can detect numbers split across multiple messages (e.g., "555" then "1234").</p>
+                    </div>
+                </details>
+
+                <!-- 13. Cloudflare Tunnel -->
+                <details class="api-section">
+                    <summary>Cloudflare Tunnel Configuration</summary>
+                    <div class="api-section-body">
+                        <p>All public access goes through a Cloudflare tunnel running as a <strong>Windows service</strong> on the host machine.</p>
+                        <br>
+                        <strong style="color:#2563eb;">Tunnel Details</strong>
+                        <div class="api-code">Tunnel ID:   721eb3ab-7865-4a69-94c5-712ce7469143
+Config File: C:\Users\appsf\.cloudflared\config.yml
+Service:     Cloudflared Tunnel (Windows service)
+Restart:     PowerShell: Restart-Service cloudflared</div>
+                        <br>
+                        <strong style="color:#2563eb;">Routing Rules (ai.appsscale.com)</strong>
+                        <div class="api-code">Path                    → Service
+/automationtest/*       → http://192.168.47.119:9800  (chat_server.py)
+/filter.html            → http://192.168.47.119:9800  (chat_server.py)
+/api/filter*            → http://192.168.47.119:9800  (chat_server.py)
+/api/automation/chat*              → http://192.168.47.119:9800  (chat_server.py)
+/api/analyze*           → http://192.168.47.119:9800  (chat_server.py)
+/api/navigate*          → http://192.168.47.119:9800  (chat_server.py)
+/api/fill*              → http://192.168.47.119:9800  (chat_server.py)
+/api/click*             → http://192.168.47.119:9800  (chat_server.py)
+/api/screenshot*        → http://192.168.47.119:9800  (chat_server.py)
+/api/submit*            → http://192.168.47.119:9800  (chat_server.py)
+/api/expand_optional*   → http://192.168.47.119:9800  (chat_server.py)
+/api/get_dropdown*      → http://192.168.47.119:9800  (chat_server.py)
+/api/v2/*               → http://192.168.47.119:9800  (chat_server.py)
+/api/health*            → http://192.168.47.119:9800  (chat_server.py)
+/ (default)             → http://192.168.47.119:5000  (AppsForte AI WebApp)</div>
+                        <br>
+                        <strong style="color:#2563eb;">Other Hostnames</strong>
+                        <div class="api-code">api.appsscale.com       → localhost:1234      (LM Studio)
+library.appsscale.com   → localhost:8082      (Knowledge Base)
+smartapi.appsscale.com  → localhost:3001      (SlackBot API)
+ssh.appsscale.com       → ssh://localhost:22  (SSH access)</div>
+                    </div>
+                </details>
+
+                <!-- 14. Environment & Config -->
+                <details class="api-section">
+                    <summary>Environment, Ports &amp; File Locations</summary>
+                    <div class="api-section-body">
+                        <strong style="color:#2563eb;">Ports</strong>
+                        <div class="api-code">Port 9800  → chat_server.py (web frontend + proxies)
+Port 9500  → api_server.py (API backend)
+Port 1234  → LM Studio (local, tunneled as api.appsscale.com)
+Port 5000  → AppsForte AI WebApp (main site)
+Port 8082  → Knowledge Base
+Port 3001  → SlackBot API</div>
+                        <br>
+                        <strong style="color:#2563eb;">File Locations</strong>
+                        <div class="api-code">Project Root:
+  /mnt/c/Users/appsf/Desktop/AppsForte/services/carrier-automation/
+
+Frontend:
+  automation_chat.html  → Main chat UI (served at /automationtest/)
+  filter.html           → Smart Filter UI (served at /filter.html)
+
+Backend:
+  chat_server.py        → Web server (port 9800)
+  api_server.py         → API server (port 9500)
+  scripts/relay_api.py  → Direct HTTP API client
+  scripts/automation.py → Playwright browser automation (legacy)
+
+Config:
+  /mnt/c/Users/appsf/.cloudflared/config.yml  → Cloudflare tunnel config
+
+Logs:
+  /mnt/c/Users/appsf/Desktop/AppsForte/logs/carrier/chat_server.log
+
+Analysis:
+  ~/relay-api-endpoints-analysis.txt  → Full 144-endpoint API analysis</div>
+                        <br>
+                        <strong style="color:#2563eb;">Environment Variables</strong>
+                        <div class="api-code">CARRIER_USERNAME  → Relay login email (default: apitest@test.com)
+CARRIER_PASSWORD  → Relay login password (default: test123)</div>
+                        <br>
+                        <strong style="color:#2563eb;">Starting the System</strong>
+                        <div class="api-code"># Terminal 1: API Server
+cd /mnt/c/Users/appsf/Desktop/AppsForte/services/carrier-automation
+python3 api_server.py
+
+# Terminal 2: Chat Server
+python3 chat_server.py
+
+# Windows: Ensure Cloudflare tunnel is running
+# (runs as Windows service "cloudflared" automatically)
+
+# LM Studio: Must be running with the Qwen 3 model loaded
+# Accessible at localhost:1234 or api.appsscale.com</div>
+                        <br>
+                        <strong style="color:#2563eb;">Verifying Everything Works</strong>
+                        <div class="api-code">curl http://localhost:9800/api/health           # Chat server
+curl http://localhost:9500/health                # API server
+curl http://localhost:9800/api/v2/form-types     # Relay API via proxy
+curl -X POST http://localhost:9800/api/automation/chat \
+  -H "Content-Type: application/json" \
+  -d '{"messages":[{"role":"user","content":"ping"}],"max_tokens":1}'</div>
+                    </div>
+                </details>
+
+            </div>
+
+            <!-- ==================== API DOCS PANEL ==================== -->
+            <div class="api-panel" id="apiPanel">
+                <div class="api-panel-head">
+                    <div>
+                        <h2>Relay On Demand &mdash; REST API Reference</h2>
+                        <div class="api-subtitle">144 endpoints discovered from Angular JS bundle analysis</div>
+                    </div>
+                    <button class="api-close-btn" onclick="toggleApiPanel()">Close</button>
+                </div>
+
+                <div class="api-note">
+                    <strong>Base URL:</strong> <code>https://ar3lay0pndm4ndi.relayondemand.com/relayapi/api/</code><br>
+                    <strong>Auth Header:</strong> <code>AuthToken: Bearer &lt;token&gt;</code> on ALL requests<br>
+                    <strong>Response Format:</strong> <code>{ Status: bool, Data: any, Message: string }</code>
+                </div>
+
+                <!-- Direct API Workflow -->
+                <details class="api-section" open>
+                    <summary>Direct API Workflow (How to Place an Order)</summary>
+                    <div class="api-section-body">
+                        <div class="api-workflow-step">
+                            <div class="api-step-num">1</div>
+                            <div class="api-step-content"><strong>Authenticate</strong><br><code>POST User/CarrierLogin</code> with <code>{ Email, Password }</code><br>Extract <code>AuthToken</code> from response &rarr; use as <code>AuthToken: Bearer &lt;token&gt;</code> header</div>
+                        </div>
+                        <div class="api-workflow-step">
+                            <div class="api-step-num">2</div>
+                            <div class="api-step-content"><strong>Load Reference Data</strong><br><code>GET Setting/GetTask</code> &rarr; task types (pickup/dropoff IDs)<br><code>GET PlaceOrder/TrailerTypes</code> &rarr; trailer options<br><code>GET PlaceOrder/EndorsementTypes</code> &rarr; endorsement options</div>
+                        </div>
+                        <div class="api-workflow-step">
+                            <div class="api-step-num">3</div>
+                            <div class="api-step-content"><strong>Check Permission</strong><br><code>GET PlaceOrder/CheckPlaceOrderAllowed</code> &rarr; verify carrier can place orders</div>
+                        </div>
+                        <div class="api-workflow-step">
+                            <div class="api-step-num">4</div>
+                            <div class="api-step-content"><strong>Estimate (Optional)</strong><br><code>POST PlaceOrder/TotalEstimatedDistance</code> with order data<br>Returns: <code>{ Cost, TimeInMinutes, DistanceInMiles }</code></div>
+                        </div>
+                        <div class="api-workflow-step">
+                            <div class="api-step-num">5</div>
+                            <div class="api-step-content"><strong>Submit Order</strong><br><code>POST PlaceOrder/NewOrder</code> with full order body<br>ALL form types (Quick Entry, Smart Wizard, Classic Entry) submit to this single endpoint</div>
+                        </div>
+                        <div class="api-note">Form type differentiation: <strong>Quick Entry</strong> sets <code>IsOrderCreatedFromNewFlow=true</code> | <strong>Smart Wizard</strong> adds <code>FromSmartWizard=true</code> | <strong>Classic Entry</strong> adds <code>CarrierDriverID</code> and <code>CarrierDriverName</code></div>
+                    </div>
+                </details>
+
+                <!-- Authentication -->
+                <details class="api-section">
+                    <summary>Authentication &amp; Users (12 endpoints)</summary>
+                    <div class="api-section-body">
+                        <div class="api-note">Login returns AuthToken. Store in localStorage["ClientAuthToken"]. Send as <code>AuthToken: Bearer &lt;token&gt;</code> header on all requests.</div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">User/CarrierLogin</span><span class="api-d">Login &rarr; returns AuthToken</span></div>
+                        <div class="api-ep"><span class="api-m g">GET</span><span class="api-p">User/LogOut</span><span class="api-d">Logout</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">User/ValidateToken</span><span class="api-d">Validate session token</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">User/CarrierUserSignUp</span><span class="api-d">Register new carrier user</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">User/CarrierUserResetPassword</span><span class="api-d">Send reset email</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">User/ResetPassword</span><span class="api-d">Reset password with token</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">User/CheckCarrierUserEmailExists</span><span class="api-d">Check email uniqueness</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">User/validateCarrierUsername</span><span class="api-d">Check username uniqueness</span></div>
+                        <div class="api-ep"><span class="api-m g">GET</span><span class="api-p">User/CarrierUserDetail</span><span class="api-d">Get current user details</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">User/GetAllCarrierUsers</span><span class="api-d">List all carrier users (paginated)</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">User/CreateCarrierUser</span><span class="api-d">Create sub-user</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">User/UpdateCarrierUser</span><span class="api-d">Update sub-user</span></div>
+                    </div>
+                </details>
+
+                <!-- Order Placement -->
+                <details class="api-section">
+                    <summary>Order Placement (18 endpoints) &mdash; CRITICAL</summary>
+                    <div class="api-section-body">
+                        <div class="api-note"><strong>POST PlaceOrder/NewOrder</strong> is the PRIMARY order endpoint. All form types submit here. See "Data Model" section for full request body.</div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">PlaceOrder/NewOrder</span><span class="api-d">Submit order (all form types)</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">PlaceOrder/TotalEstimatedDistance</span><span class="api-d">Calculate distance/cost estimate</span></div>
+                        <div class="api-ep"><span class="api-m g">GET</span><span class="api-p">PlaceOrder/CheckPlaceOrderAllowed</span><span class="api-d">Check if carrier can place orders</span></div>
+                        <div class="api-ep"><span class="api-m g">GET</span><span class="api-p">PlaceOrder/EndorsementTypes</span><span class="api-d">Get endorsement types</span></div>
+                        <div class="api-ep"><span class="api-m g">GET</span><span class="api-p">PlaceOrder/TrailerTypes</span><span class="api-d">Get trailer types</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">PlaceOrder/ExtendDuration/{orderId}</span><span class="api-d">Extend order duration</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">PlaceOrder/RescheduleOrder</span><span class="api-d">Reschedule existing order</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">PlaceOrder/UpdateScheduleOrder</span><span class="api-d">Update scheduled order</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">PlaceOrder/ReAssignOrder</span><span class="api-d">Re-assign to different driver</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">PlaceOrder/UpdateRelayDriver</span><span class="api-d">Update assigned driver</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">PlaceOrder/FeedbackDriver</span><span class="api-d">Submit driver rating</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">PlaceOrder/NotInterestedToPlaceOrder</span><span class="api-d">Cancel before placement</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">PlaceOrder/UpdateOrderFromSuggestions</span><span class="api-d">Apply order suggestion</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">PlaceOrder/UpdateOrdersFromSuggestions</span><span class="api-d">Apply suggestions (bulk)</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">PlaceOrder/ApproveUnvettedDriverAndAssignOrder</span><span class="api-d">Approve unvetted driver</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">PlaceOrder/NewRelayFromMultiDriverBlock/{blockId}</span><span class="api-d">Create from Multi-Driver Block</span></div>
+                        <div class="api-ep"><span class="api-m g">GET</span><span class="api-p">PlaceOrder/SetOrderForEveryone/{orderId}</span><span class="api-d">Open to all drivers</span></div>
+                        <div class="api-ep"><span class="api-m g">GET</span><span class="api-p">PlaceOrder/GetQuickOrderList</span><span class="api-d">List quick order templates</span></div>
+                    </div>
+                </details>
+
+                <!-- Order Management -->
+                <details class="api-section">
+                    <summary>Order Management (16 endpoints)</summary>
+                    <div class="api-section-body">
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">Order/GetAllOrderOfCarrier</span><span class="api-d">List all orders (paginated)</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">Order/GetNowOnGoingOrders</span><span class="api-d">Get active "Now" orders</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">Order/GetScheduledOnGoingOrders</span><span class="api-d">Get scheduled orders</span></div>
+                        <div class="api-ep"><span class="api-m g">GET</span><span class="api-p">Order/GetOrderDetailByOrderID/{id}</span><span class="api-d">Get order detail</span></div>
+                        <div class="api-ep"><span class="api-m g">GET</span><span class="api-p">Order/GetOrderStatusById/{id}</span><span class="api-d">Get order status</span></div>
+                        <div class="api-ep"><span class="api-m g">GET</span><span class="api-p">Order/Inspection/{id}</span><span class="api-d">Get inspection details</span></div>
+                        <div class="api-ep"><span class="api-m g">GET</span><span class="api-p">Order/CalculateRAPScore/{id}</span><span class="api-d">Calculate RAP score</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">Order/MarkAsCancelled</span><span class="api-d">Cancel order</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">Order/MarkOrderAsDisputed</span><span class="api-d">Dispute order</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">Order/UpdatePay/{id}</span><span class="api-d">Update order pay</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">Order/UpdateScheduleOrder</span><span class="api-d">Update scheduled order</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">Order/AddRelayInsurance/{id}</span><span class="api-d">Add relay insurance</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">Order/RemoveRelayInsurance/{id}</span><span class="api-d">Remove relay insurance</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">Order/AllowAdvanceWithdrawal/{id}</span><span class="api-d">Allow advance withdrawal</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">Order/EnableInstantWithdrawal/{id}</span><span class="api-d">Enable instant withdrawal</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">Order/DisableInstantWithdrawal/{id}</span><span class="api-d">Disable instant withdrawal</span></div>
+                    </div>
+                </details>
+
+                <!-- Carrier Drivers -->
+                <details class="api-section">
+                    <summary>Carrier Drivers &mdash; Own Fleet (12 endpoints)</summary>
+                    <div class="api-section-body">
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">CarrierDriver/Add</span><span class="api-d">Add carrier driver</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">CarrierDriver/Update</span><span class="api-d">Update carrier driver</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">CarrierDriver/GetAllDrivers</span><span class="api-d">List all drivers (paginated)</span></div>
+                        <div class="api-ep"><span class="api-m g">GET</span><span class="api-p">CarrierDriver/GetAllDrivers</span><span class="api-d">List all drivers (non-paginated)</span></div>
+                        <div class="api-ep"><span class="api-m g">GET</span><span class="api-p">CarrierDriver/GetActiveCarrierDrivers</span><span class="api-d">Get active drivers only</span></div>
+                        <div class="api-ep"><span class="api-m g">GET</span><span class="api-p">CarrierDriver/GetCarrierDriverDetails?carrierDriverID={id}</span><span class="api-d">Get driver detail</span></div>
+                        <div class="api-ep"><span class="api-m g">GET</span><span class="api-p">CarrierDriver/GetDriverPastOrdersStatuses/{id}</span><span class="api-d">Driver past order statuses</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">CarrierDriver/GetDriverOrderHistory</span><span class="api-d">Driver order history</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">CarrierDriver/ChangeDriverStatus</span><span class="api-d">Change driver status</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">CarrierDriver/DeleteDriver/{id}</span><span class="api-d">Delete driver</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">CarrierDriver/CheckDriverEmailExists</span><span class="api-d">Check driver email exists</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">CarrierDriver/IsInBetweenOrder</span><span class="api-d">Check if drivers in-between orders</span></div>
+                    </div>
+                </details>
+
+                <!-- Relay Driver Network -->
+                <details class="api-section">
+                    <summary>Relay Driver Network (12 endpoints)</summary>
+                    <div class="api-section-body">
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">RelayDriver/AddRelayDriver</span><span class="api-d">Add relay driver</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">RelayDriver/ValidatePhone</span><span class="api-d">Validate phone number</span></div>
+                        <div class="api-ep"><span class="api-m g">GET</span><span class="api-p">RelayDriver/GetPreferredNetworkDriver</span><span class="api-d">Get preferred drivers</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">RelayDriver/RemoveRelayDriverFromPreferredNetwork/{id}</span><span class="api-d">Remove from preferred</span></div>
+                        <div class="api-ep"><span class="api-m g">GET</span><span class="api-p">RelayDriver/GetBlockedDrivers</span><span class="api-d">Get blocked drivers</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">RelayDriver/blockDriver/{id}</span><span class="api-d">Block a driver</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">RelayDriver/UnblockDrivers</span><span class="api-d">Unblock drivers</span></div>
+                        <div class="api-ep"><span class="api-m g">GET</span><span class="api-p">RelayDriver/GetPastDriver</span><span class="api-d">Get past drivers</span></div>
+                        <div class="api-ep"><span class="api-m g">GET</span><span class="api-p">RelayDriver/GetUnvettedDrivers</span><span class="api-d">Get unvetted drivers</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">RelayDriver/SearchAvailableDrivers</span><span class="api-d">Search available drivers</span></div>
+                        <div class="api-ep"><span class="api-m g">GET</span><span class="api-p">RelayDriver/Profile/{id}</span><span class="api-d">Get driver profile</span></div>
+                        <div class="api-ep"><span class="api-m g">GET</span><span class="api-p">RelayDriver/GetCurrentLocation/{id}</span><span class="api-d">Get driver GPS location</span></div>
+                    </div>
+                </details>
+
+                <!-- Carrier Management -->
+                <details class="api-section">
+                    <summary>Carrier Management (11 endpoints)</summary>
+                    <div class="api-section-body">
+                        <div class="api-ep"><span class="api-m g">GET</span><span class="api-p">Carrier/GetCarrierDetail/0</span><span class="api-d">Get carrier profile</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">Carrier/UpdateCarrierInfo</span><span class="api-d">Update carrier profile</span></div>
+                        <div class="api-ep"><span class="api-m g">GET</span><span class="api-p">Carrier/GetCounts</span><span class="api-d">Get dashboard counts</span></div>
+                        <div class="api-ep"><span class="api-m g">GET</span><span class="api-p">Carrier/GetCardsCount</span><span class="api-d">Get payment cards count</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">Carrier/HireDriver</span><span class="api-d">Hire a driver</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">Carrier/ApproveUnvettedDriver?id={id}</span><span class="api-d">Approve unvetted driver</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">Carrier/RemoveUnvettedDriver?id={id}</span><span class="api-d">Remove unvetted driver</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">Carrier/ResetCarrierUserPassword</span><span class="api-d">Change password</span></div>
+                        <div class="api-ep"><span class="api-m g">GET</span><span class="api-p">Carrier/GetKeyFeatures</span><span class="api-d">Get key features</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">Carrier/ExportOrdersReport</span><span class="api-d">Export orders report</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">Carrier/GetHistoryOrders</span><span class="api-d">Get order history</span></div>
+                    </div>
+                </details>
+
+                <!-- Payment -->
+                <details class="api-section">
+                    <summary>Payment (10 endpoints)</summary>
+                    <div class="api-section-body">
+                        <div class="api-note">Supports both Braintree and Stripe payment processing.</div>
+                        <div class="api-ep"><span class="api-m g">GET</span><span class="api-p">Payment/GetCarrierCards</span><span class="api-d">Get saved payment cards</span></div>
+                        <div class="api-ep"><span class="api-m g">GET</span><span class="api-p">Payment/GetClientToken</span><span class="api-d">Get Braintree client token</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">Payment/DeletePaymentMethod</span><span class="api-d">Delete payment method</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">Payment/SetAsDefaultCard</span><span class="api-d">Set default card</span></div>
+                        <div class="api-ep"><span class="api-m g">GET</span><span class="api-p">payment/GetStripeClientSecret</span><span class="api-d">Get Stripe client secret</span></div>
+                        <div class="api-ep"><span class="api-m g">GET</span><span class="api-p">payment/GetStripeSavedCards</span><span class="api-d">Get Stripe saved cards</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">payment/SetStripeDefaultCard/{cardId}</span><span class="api-d">Set Stripe default card</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">payment/DeleteStripeCard/{cardId}</span><span class="api-d">Delete Stripe card</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">payment/CancelStripeSetupIntent/{id}</span><span class="api-d">Cancel Stripe setup intent</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">payment/PrefundForFuel/{id}</span><span class="api-d">Prefund for fuel</span></div>
+                    </div>
+                </details>
+
+                <!-- Messaging & Notifications -->
+                <details class="api-section">
+                    <summary>Messaging &amp; Notifications (11 endpoints)</summary>
+                    <div class="api-section-body">
+                        <div class="api-ep"><span class="api-m g">GET</span><span class="api-p">Carrier/GetAllNotificationCount</span><span class="api-d">Get notification count</span></div>
+                        <div class="api-ep"><span class="api-m g">GET</span><span class="api-p">Carrier/GetAllNotifications</span><span class="api-d">Get all notifications</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">Carrier/ClearAllNotifications</span><span class="api-d">Clear all notifications</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">Carrier/GetMessages</span><span class="api-d">Get all order messages</span></div>
+                        <div class="api-ep"><span class="api-m g">GET</span><span class="api-p">Carrier/GetMessagesByOrderId/{id}</span><span class="api-d">Get messages by order</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">Carrier/CreateReply</span><span class="api-d">Send message reply</span></div>
+                        <div class="api-ep"><span class="api-m g">GET</span><span class="api-p">Social/FindNearestDrivers</span><span class="api-d">Find nearest drivers</span></div>
+                        <div class="api-ep"><span class="api-m g">GET</span><span class="api-p">Social/GetMessages?relayDriverID={id}</span><span class="api-d">Get messages by driver</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">Social/SendMessage</span><span class="api-d">Send social message</span></div>
+                        <div class="api-ep"><span class="api-m g">GET</span><span class="api-p">Social/GetUnreadMessageDriverDetails</span><span class="api-d">Get unread message details</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">Social/GetPrivateMessageThreadDetails</span><span class="api-d">Get private message thread</span></div>
+                    </div>
+                </details>
+
+                <!-- Other APIs -->
+                <details class="api-section">
+                    <summary>Other APIs: Rating, Multi-Driver Blocks, Fuel, Motive, Settings (16 endpoints)</summary>
+                    <div class="api-section-body">
+                        <strong style="color:#2563eb;">Rating</strong>
+                        <div class="api-ep"><span class="api-m g">GET</span><span class="api-p">Carrier/GetPendingRatingOrders</span><span class="api-d">Get pending rating orders</span></div>
+                        <div class="api-ep"><span class="api-m g">GET</span><span class="api-p">Carrier/GetRatingQuestions</span><span class="api-d">Get rating questions</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">Carrier/AddDriverRatings/{orderId}</span><span class="api-d">Submit driver ratings</span></div>
+                        <br><strong style="color:#2563eb;">Multi-Driver Blocks</strong>
+                        <div class="api-ep"><span class="api-m g">GET</span><span class="api-p">MultiDriverBlock/Get</span><span class="api-d">Get multi driver blocks</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">MultiDriverBlock/CarrierBookedHistory</span><span class="api-d">Get MDB booking history</span></div>
+                        <br><strong style="color:#2563eb;">Fuel</strong>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">FuelCode/Carrier/Get</span><span class="api-d">Get fuel codes</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">FuelCode/Carrier/Export</span><span class="api-d">Export fuel codes</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">FuelCode/Carrier/UpdateAllowFuel</span><span class="api-d">Toggle allow fuel</span></div>
+                        <br><strong style="color:#2563eb;">Motive Integration</strong>
+                        <div class="api-ep"><span class="api-m g">GET</span><span class="api-p">Motive/getDrivers</span><span class="api-d">Get Motive drivers</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">Motive/linkCarrier?code={code}</span><span class="api-d">Link Motive carrier</span></div>
+                        <br><strong style="color:#2563eb;">Settings &amp; Reference</strong>
+                        <div class="api-ep"><span class="api-m g">GET</span><span class="api-p">Common/GetStates</span><span class="api-d">Get US states list</span></div>
+                        <div class="api-ep"><span class="api-m g">GET</span><span class="api-p">Setting/GetTask</span><span class="api-d">Get task types (pickup/dropoff)</span></div>
+                        <div class="api-ep"><span class="api-m g">GET</span><span class="api-p">Setting/GetSupportDetails</span><span class="api-d">Get support details</span></div>
+                        <div class="api-ep"><span class="api-m g">GET</span><span class="api-p">Setting/GetSettings</span><span class="api-d">Get app settings</span></div>
+                        <br><strong style="color:#2563eb;">News</strong>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">CarrierNews/GetAllNews</span><span class="api-d">Get all news</span></div>
+                        <div class="api-ep"><span class="api-m p">POST</span><span class="api-p">CarrierNews/NewsRead?newsId={id}</span><span class="api-d">Mark news as read</span></div>
+                    </div>
+                </details>
+
+                <!-- Data Model -->
+                <details class="api-section">
+                    <summary>Data Model: PlaceOrder/NewOrder Request Body (~55 fields)</summary>
+                    <div class="api-section-body">
+                        <div class="api-note">All form types submit to the same endpoint. Fields marked <strong>*</strong> are required.</div>
+                        <strong style="color:#2563eb;">Address Fields</strong>
+                        <div class="api-field"><span class="api-fn">StartAddress *</span><span class="api-ft">string</span><span class="api-fd">Full pickup address</span></div>
+                        <div class="api-field"><span class="api-fn">StartAddressLat</span><span class="api-ft">string</span><span class="api-fd">Pickup latitude</span></div>
+                        <div class="api-field"><span class="api-fn">StartAddressLong</span><span class="api-ft">string</span><span class="api-fd">Pickup longitude</span></div>
+                        <div class="api-field"><span class="api-fn">StartAddressCity</span><span class="api-ft">string</span><span class="api-fd">Pickup city</span></div>
+                        <div class="api-field"><span class="api-fn">StartAddressStateCode</span><span class="api-ft">string</span><span class="api-fd">Pickup state code</span></div>
+                        <div class="api-field"><span class="api-fn">DestinationAddress *</span><span class="api-ft">string</span><span class="api-fd">Drop-off address</span></div>
+                        <div class="api-field"><span class="api-fn">DestinationAddressLat</span><span class="api-ft">string</span><span class="api-fd">Drop-off latitude</span></div>
+                        <div class="api-field"><span class="api-fn">DestinationAddressLong</span><span class="api-ft">string</span><span class="api-fd">Drop-off longitude</span></div>
+                        <br><strong style="color:#2563eb;">Task Fields</strong>
+                        <div class="api-field"><span class="api-fn">StartAddressTaskID</span><span class="api-ft">string</span><span class="api-fd">Pickup task type ID</span></div>
+                        <div class="api-field"><span class="api-fn">StartAddressTaskHour</span><span class="api-ft">string</span><span class="api-fd">Hours for pickup task</span></div>
+                        <div class="api-field"><span class="api-fn">EndAddressTaskID *</span><span class="api-ft">string</span><span class="api-fd">Drop-off task type ID</span></div>
+                        <div class="api-field"><span class="api-fn">EndAddressTaskHour *</span><span class="api-ft">string</span><span class="api-fd">Hours for drop-off task</span></div>
+                        <br><strong style="color:#2563eb;">Schedule &amp; Timing</strong>
+                        <div class="api-field"><span class="api-fn">WhenYouWantDriver *</span><span class="api-ft">string</span><span class="api-fd">"0"=exact, "1"=timeframe, "2"=not sure</span></div>
+                        <div class="api-field"><span class="api-fn">ScheduleTime *</span><span class="api-ft">string</span><span class="api-fd">HH:mm format</span></div>
+                        <div class="api-field"><span class="api-fn">DriverBookDurations *</span><span class="api-ft">string</span><span class="api-fd">Booking duration in hours</span></div>
+                        <br><strong style="color:#2563eb;">Pay Fields</strong>
+                        <div class="api-field"><span class="api-fn">DriverPayType *</span><span class="api-ft">string</span><span class="api-fd">"0"=flat, "1"=hourly, "2"=week, "3"=load, "4"=mile</span></div>
+                        <div class="api-field"><span class="api-fn">FlatAmount</span><span class="api-ft">string</span><span class="api-fd">Flat rate amount (PayType 0)</span></div>
+                        <div class="api-field"><span class="api-fn">HourlyFlatAmount</span><span class="api-ft">string</span><span class="api-fd">Hourly rate (PayType 1)</span></div>
+                        <div class="api-field"><span class="api-fn">PerWeekAmount</span><span class="api-ft">string</span><span class="api-fd">Weekly rate (PayType 2)</span></div>
+                        <div class="api-field"><span class="api-fn">PerLoadAmount</span><span class="api-ft">string</span><span class="api-fd">Per-load rate (PayType 3)</span></div>
+                        <div class="api-field"><span class="api-fn">PerMileAmount</span><span class="api-ft">string</span><span class="api-fd">Per-mile rate (PayType 4)</span></div>
+                        <br><strong style="color:#2563eb;">Equipment</strong>
+                        <div class="api-field"><span class="api-fn">TrailerTypeID *</span><span class="api-ft">string</span><span class="api-fd">1=FlatBed, 2=DryVan, 3=Reefer, 4=PowerOnly, 5=BoxTruck, 6=Container</span></div>
+                        <div class="api-field"><span class="api-fn">TruckUnitNumber</span><span class="api-ft">string</span><span class="api-fd">Max 10 chars</span></div>
+                        <div class="api-field"><span class="api-fn">TrailerNumber</span><span class="api-ft">string</span><span class="api-fd">Max 15 chars</span></div>
+                        <br><strong style="color:#2563eb;">Notes &amp; Options</strong>
+                        <div class="api-field"><span class="api-fn">SpecialNotes</span><span class="api-ft">string</span><span class="api-fd">Max 500 chars</span></div>
+                        <div class="api-field"><span class="api-fn">InternalNotes</span><span class="api-ft">string</span><span class="api-fd">Max 200 chars</span></div>
+                        <div class="api-field"><span class="api-fn">IsOneWay</span><span class="api-ft">bool</span><span class="api-fd">One-way trip</span></div>
+                        <div class="api-field"><span class="api-fn">IsMultipleStops</span><span class="api-ft">bool</span><span class="api-fd">Has additional stops</span></div>
+                        <div class="api-field"><span class="api-fn">NetworkSelection</span><span class="api-ft">bool</span><span class="api-fd">true=everyone, false=preferred only</span></div>
+                        <div class="api-field"><span class="api-fn">EndorsementTypes</span><span class="api-ft">int[]</span><span class="api-fd">Array of endorsement IDs</span></div>
+                        <br><strong style="color:#2563eb;">Form Type Flags</strong>
+                        <div class="api-field"><span class="api-fn">IsOrderCreatedFromNewFlow</span><span class="api-ft">bool</span><span class="api-fd">true for Quick Entry / Smart Wizard</span></div>
+                        <div class="api-field"><span class="api-fn">FromSmartWizard</span><span class="api-ft">bool</span><span class="api-fd">true for Smart Wizard only</span></div>
+                        <div class="api-field"><span class="api-fn">IsRequestFromWeb</span><span class="api-ft">bool</span><span class="api-fd">Always true (web client)</span></div>
+                        <br><strong style="color:#2563eb;">Classic Entry Only</strong>
+                        <div class="api-field"><span class="api-fn">CarrierDriverID</span><span class="api-ft">string</span><span class="api-fd">Own fleet driver ID</span></div>
+                        <div class="api-field"><span class="api-fn">CarrierDriverName</span><span class="api-ft">string</span><span class="api-fd">Own fleet driver name</span></div>
+                        <div class="api-field"><span class="api-fn">ScheduleDate</span><span class="api-ft">string</span><span class="api-fd">Scheduled date</span></div>
+                        <br><strong style="color:#2563eb;">Additional Stops (array)</strong>
+                        <div class="api-field"><span class="api-fn">AdditionalStops[]</span><span class="api-ft">array</span><span class="api-fd">Each: { AdditionalStopAddress, Lat, Long, City, StateCode, TaskID, TaskHours }</span></div>
+                    </div>
+                </details>
+
+                <!-- Enum Values -->
+                <details class="api-section">
+                    <summary>Enum Values &amp; Constants</summary>
+                    <div class="api-section-body">
+                        <strong style="color:#2563eb;">WhenWantDriver</strong>
+                        <div class="api-enum"><span class="api-ev">0</span><span class="api-en">exactdatetime</span><span class="api-ed">Exact date/time specified</span></div>
+                        <div class="api-enum"><span class="api-ev">1</span><span class="api-en">timeframe</span><span class="api-ed">Open-ended time window</span></div>
+                        <div class="api-enum"><span class="api-ev">2</span><span class="api-en">notsure</span><span class="api-ed">Not sure / ASAP</span></div>
+                        <br><strong style="color:#2563eb;">DriverPayType</strong>
+                        <div class="api-enum"><span class="api-ev">0</span><span class="api-en">Flat Rate</span><span class="api-ed">uses FlatAmount</span></div>
+                        <div class="api-enum"><span class="api-ev">1</span><span class="api-en">Per Hour</span><span class="api-ed">uses HourlyFlatAmount</span></div>
+                        <div class="api-enum"><span class="api-ev">2</span><span class="api-en">Per Week</span><span class="api-ed">uses PerWeekAmount</span></div>
+                        <div class="api-enum"><span class="api-ev">3</span><span class="api-en">Per Load</span><span class="api-ed">uses PerLoadAmount + TotalLoads</span></div>
+                        <div class="api-enum"><span class="api-ev">4</span><span class="api-en">Per Mile</span><span class="api-ed">uses PerMileAmount + EstimatedTotalMiles</span></div>
+                        <br><strong style="color:#2563eb;">OrderStatus</strong>
+                        <div class="api-enum"><span class="api-ev">1</span><span class="api-en">Rejected</span><span class="api-ed">Rejected by relay driver</span></div>
+                        <div class="api-enum"><span class="api-ev">2</span><span class="api-en">Searching</span><span class="api-ed">Searching for driver</span></div>
+                        <div class="api-enum"><span class="api-ev">3</span><span class="api-en">Placed</span><span class="api-ed">Order placed</span></div>
+                        <div class="api-enum"><span class="api-ev">4</span><span class="api-en">On My Way</span><span class="api-ed">Driver en route</span></div>
+                        <div class="api-enum"><span class="api-ev">5</span><span class="api-en">Inspection</span><span class="api-ed">Vehicle inspection</span></div>
+                        <div class="api-enum"><span class="api-ev">6</span><span class="api-en">In Progress</span><span class="api-ed">Order in progress</span></div>
+                        <div class="api-enum"><span class="api-ev">7</span><span class="api-en">Completed</span><span class="api-ed">Order completed</span></div>
+                        <div class="api-enum"><span class="api-ev">8</span><span class="api-en">Cancelled (Driver)</span><span class="api-ed">Cancelled by driver</span></div>
+                        <div class="api-enum"><span class="api-ev">9</span><span class="api-en">Cancelled (Carrier)</span><span class="api-ed">Cancelled by carrier</span></div>
+                        <div class="api-enum"><span class="api-ev">10</span><span class="api-en">Timed Out</span><span class="api-ed">Order timed out</span></div>
+                        <div class="api-enum"><span class="api-ev">11</span><span class="api-en">Disputed</span><span class="api-ed">Order disputed</span></div>
+                        <div class="api-enum"><span class="api-ev">12</span><span class="api-en">Cancelled (Admin)</span><span class="api-ed">Cancelled by admin</span></div>
+                        <br><strong style="color:#2563eb;">TrailerType</strong>
+                        <div class="api-enum"><span class="api-ev">1</span><span class="api-en">FlatBed</span><span class="api-ed"></span></div>
+                        <div class="api-enum"><span class="api-ev">2</span><span class="api-en">Dry Van</span><span class="api-ed"></span></div>
+                        <div class="api-enum"><span class="api-ev">3</span><span class="api-en">Reefer</span><span class="api-ed"></span></div>
+                        <div class="api-enum"><span class="api-ev">4</span><span class="api-en">None/Power Only</span><span class="api-ed"></span></div>
+                        <div class="api-enum"><span class="api-ev">5</span><span class="api-en">Box Truck</span><span class="api-ed"></span></div>
+                        <div class="api-enum"><span class="api-ev">6</span><span class="api-en">Container</span><span class="api-ed"></span></div>
+                        <br><strong style="color:#2563eb;">OrderAssign</strong>
+                        <div class="api-enum"><span class="api-ev">"Find"</span><span class="api-en">Search</span><span class="api-ed">Search for any available driver</span></div>
+                        <div class="api-enum"><span class="api-ev">"Preferred"</span><span class="api-en">Preferred</span><span class="api-ed">Assign to preferred driver</span></div>
+                        <br><strong style="color:#2563eb;">NetworkSelection</strong>
+                        <div class="api-enum"><span class="api-ev">true</span><span class="api-en">Everyone</span><span class="api-ed">All Relay drivers can see</span></div>
+                        <div class="api-enum"><span class="api-ev">false</span><span class="api-en">Preferred Only</span><span class="api-ed">Only preferred network</span></div>
+                    </div>
+                </details>
+
+                <!-- SignalR -->
+                <details class="api-section">
+                    <summary>SignalR Real-Time Hubs &amp; Angular Routes</summary>
+                    <div class="api-section-body">
+                        <strong style="color:#2563eb;">SignalR Hubs</strong>
+                        <div class="api-note">Connection params: <code>{ AuthToken: &lt;token&gt;, UserType: 2 }</code></div>
+                        <div style="margin:6px 0;font-size:12px;"><strong>CarrierNotificationsHub</strong> &mdash; Events: UpdateCarrierDashboard, UpdateNotificationCount</div>
+                        <div style="margin:6px 0;font-size:12px;"><strong>OrderTrackerMapHub</strong> &mdash; Events: RefreshVehicleLocation, UpdateTrackStatus</div>
+                        <br><strong style="color:#2563eb;">Angular Client Routes</strong>
+                        <div class="api-code">/client/home                      Dashboard
+/client/place-order               Place Order (New Order)
+/client/smart-wizard-place-order  Smart Wizard
+/client/review-order              Review Order
+/client/currentorders             Current Orders
+/client/order-detail/:Id          Order Detail
+/client/track-order/:Id           Track Order (Map)
+/client/order-history             Order History
+/client/report                    Reports
+/client/carrier-profile           Carrier Profile
+/client/preferred-network         Preferred Drivers
+/client/multi-driver-blocks       Multi Driver Blocks
+/client/messages                  Messages
+/client/payment                   Payment Methods
+/client/users                     Manage Sub-Users
+/client/fuel-perks                Fuel Perks
+/client/motive-drivers            Motive Integration</div>
+                    </div>
+                </details>
+
+            </div>
+            <div class="messages" id="messages">
+                <div class="message system">
+                    <div class="message-header">SYSTEM</div>
+                    <div class="message-content">
+<strong>Welcome!</strong>
+I'm your AI assistant for Relay On Demand carrier dispatching. I can help you:
+
+- Place orders (Quick Entry, Smart Wizard, Classic Entry, Multi-Driver Blocks)
+- View and manage existing orders
+- Check driver availability
+- Navigate the platform
+
+I'll automatically choose the right form type based on your request, or ask for clarification if needed. Just tell me what you need!</div>
+                </div>
+            </div>
+            <div class="loading-overlay" id="loading"></div>
+        </div>
+
+        <div class="input-area">
+            <textarea id="userInput" placeholder="Tell me what you'd like to do... (e.g., 'Send a driver to pick up at 123 Main St' or 'Show my current orders')" onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault();sendMessage();}"></textarea>
+
+            <div class="controls">
+                <div class="suggestions">
+                    <div class="suggestion-chip" onclick="fillSuggestion('Quick dispatch: send a driver to pick up at 1725 W 17th St, Santa Ana CA')">Quick Dispatch</div>
+                    <div class="suggestion-chip" onclick="fillSuggestion('Show my current orders')">Current Orders</div>
+                    <div class="suggestion-chip" onclick="fillSuggestion('What form types are available?')">Form Types</div>
+                    <div class="suggestion-chip" onclick="fillSuggestion('Show available drivers')">Drivers</div>
+                </div>
+                <button class="send-btn" id="sendBtn" onclick="sendMessage()">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ---- Panel Toggles ----
+        function toggleApiPanel() {
+            document.getElementById('docsPanel').classList.remove('open');
+            document.getElementById('apiPanel').classList.toggle('open');
+        }
+        function toggleDocsPanel() {
+            document.getElementById('apiPanel').classList.remove('open');
+            document.getElementById('docsPanel').classList.toggle('open');
+        }
+
+        // ---- State ----
+        let CHAT_HISTORY = [];
+        let API_CONTEXT = null;  // Form types, reference data, carrier info from v2 API
+        let isConnectedLM = false;
+        let isConnectedAPI = false;
+        let PENDING_ORDER = null;  // Stores order data awaiting user confirmation
+
+        // ---- Init ----
+        window.addEventListener('DOMContentLoaded', () => {
+            testConnections();
+            loadContext();
+        });
+
+        function toggleConfig() {
+            document.getElementById('configPanel').classList.toggle('open');
+        }
+
+        // ---- Connection Tests ----
+        async function testConnections() {
+            // Test AI Engine
+            updateStatus('lm', 'testing', 'Testing AI Engine...');
+            try {
+                const response = await fetch('/api/automation/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ messages: [{ role: 'user', content: 'ping' }], max_tokens: 1 })
+                });
+                if (response.ok) {
+                    updateStatus('lm', 'connected', 'AI Engine Connected');
+                    isConnectedLM = true;
+                } else {
+                    throw new Error(response.status);
+                }
+            } catch (error) {
+                updateStatus('lm', 'disconnected', 'AI Engine: ' + error.message);
+                isConnectedLM = false;
+            }
+
+            // Test Relay API (v2)
+            updateStatus('api', 'testing', 'Testing Relay API...');
+            try {
+                const response = await fetch('/api/v2/form-types');
+                if (response.ok) {
+                    updateStatus('api', 'connected', 'Relay API Connected');
+                    isConnectedAPI = true;
+                } else {
+                    throw new Error(response.status);
+                }
+            } catch (error) {
+                updateStatus('api', 'disconnected', 'Relay API: ' + error.message);
+                isConnectedAPI = false;
+            }
+        }
+
+        function updateStatus(service, state, text) {
+            const dot = document.getElementById(service + 'StatusDot');
+            const label = document.getElementById(service + 'StatusText');
+            dot.className = 'status-dot ' + (state === 'connected' ? 'green' : state === 'testing' ? 'yellow' : 'red');
+            label.textContent = text;
+        }
+
+        // ---- Load Context from v2 API ----
+        async function loadContext() {
+            if (!isConnectedAPI) {
+                document.getElementById('carrierName').textContent = 'Not connected';
+                return;
+            }
+            try {
+                const resp = await fetch('/api/v2/context');
+                if (resp.ok) {
+                    API_CONTEXT = await resp.json();
+                    document.getElementById('apiMode').textContent = 'Direct API (v2)';
+                    document.getElementById('carrierName').textContent =
+                        API_CONTEXT.carrier?.Data?.CarrierName || API_CONTEXT.carrier?.CarrierName || 'Connected';
+                    document.getElementById('formTypeCount').textContent =
+                        Object.keys(API_CONTEXT.form_types || {}).length;
+                }
+            } catch (error) {
+                console.error('Failed to load context:', error);
+            }
+        }
+
+        // ---- API Helpers ----
+        async function callAPI(endpoint, method = 'GET', body = null) {
+            const options = { method, headers: { 'Content-Type': 'application/json' } };
+            if (body) options.body = JSON.stringify(body);
+            const response = await fetch(endpoint, options);
+            return await response.json();
+        }
+
+        async function callLLMStream(messages, targetEl) {
+            const response = await fetch('/api/automation/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    messages: messages,
+                    temperature: 0.3,
+                    max_tokens: 16000,
+                    stream: true
+                })
+            });
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let fullText = '';
+            let buffer = '';
+            let inThink = false;
+            let thinkEl = null;
+            let visibleEl = null;
+            let thinkContent = '';
+
+            // Set up container for live streaming
+            targetEl.style.opacity = '1';
+            targetEl.innerHTML = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop();
+
+                for (const line of lines) {
+                    if (!line.startsWith('data: ')) continue;
+                    const data = line.slice(6).trim();
+                    if (data === '[DONE]') continue;
+                    try {
+                        const parsed = JSON.parse(data);
+                        const delta = parsed.choices?.[0]?.delta?.content || '';
+                        if (!delta) continue;
+
+                        fullText += delta;
+
+                        // Detect <think> open tag
+                        if (!inThink && fullText.includes('<think>') && !fullText.includes('</think>')) {
+                            inThink = true;
+                            if (!thinkEl) {
+                                thinkEl = document.createElement('div');
+                                thinkEl.className = 'think-live';
+                                thinkEl.innerHTML = '<span class="think-label">Reasoning\u2026</span>';
+                                targetEl.insertBefore(thinkEl, targetEl.firstChild);
+                            }
+                            // Extract thinking content so far (after <think>)
+                            thinkContent = fullText.split('<think>').pop();
+                            const textNode = thinkEl.lastChild;
+                            if (textNode && textNode.nodeType === 3) {
+                                textNode.textContent = thinkContent;
+                            } else {
+                                thinkEl.appendChild(document.createTextNode(thinkContent));
+                            }
+                            thinkEl.scrollTop = thinkEl.scrollHeight;
+                        }
+                        // Still inside <think> — append delta to reasoning display
+                        else if (inThink && !fullText.includes('</think>')) {
+                            thinkContent += delta;
+                            const textNode = thinkEl.lastChild;
+                            if (textNode && textNode.nodeType === 3) {
+                                textNode.textContent += delta;
+                            } else {
+                                thinkEl.appendChild(document.createTextNode(delta));
+                            }
+                            thinkEl.scrollTop = thinkEl.scrollHeight;
+                        }
+                        // Detect </think> close tag — transition to visible response
+                        else if (inThink && fullText.includes('</think>')) {
+                            inThink = false;
+                            // Clean up think content (remove </think> tail)
+                            thinkContent = fullText.split('<think>')[1].split('</think>')[0];
+                            // Collapse reasoning section
+                            if (thinkEl) {
+                                thinkEl.className = 'think-done';
+                                thinkEl.innerHTML = '<span class="think-label">Reasoning (click to expand)</span>';
+                                const stored = thinkContent;
+                                thinkEl.onclick = function() {
+                                    if (this.classList.contains('expanded')) {
+                                        this.classList.remove('expanded');
+                                        this.innerHTML = '<span class="think-label">Reasoning (click to expand)</span>';
+                                    } else {
+                                        this.classList.add('expanded');
+                                        this.innerHTML = '<span class="think-label">Reasoning (click to collapse)</span>\n' + stored;
+                                    }
+                                };
+                            }
+                            // Show any visible text after </think>
+                            const afterThink = fullText.split('</think>').pop().trim();
+                            visibleEl = document.createElement('div');
+                            visibleEl.textContent = afterThink;
+                            targetEl.appendChild(visibleEl);
+                        }
+                        // Normal visible text (after think or no think at all)
+                        else if (!inThink) {
+                            if (visibleEl) {
+                                visibleEl.textContent += delta;
+                            } else if (!fullText.includes('<think>')) {
+                                // No thinking at all — stream directly
+                                const textNode = targetEl.lastChild;
+                                if (textNode && textNode.nodeType === 3) {
+                                    textNode.textContent += delta;
+                                } else {
+                                    targetEl.appendChild(document.createTextNode(delta));
+                                }
+                            }
+                        }
+
+                        document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
+                    } catch (e) {}
+                }
+            }
+
+            // Final cleanup: return only the visible text (strip think tags)
+            let result = fullText;
+            if (result.includes('<think>') && result.includes('</think>')) {
+                result = result.split('</think>').pop().trim();
+            }
+            return result;
+        }
+
+        // ---- UI Helpers ----
+        function renderMessage(role, content, toolUse = null) {
+            const container = document.getElementById('messages');
+            const div = document.createElement('div');
+            div.className = `message ${role}`;
+
+            let html = `<div class="message-header">${role.toUpperCase()}</div>`;
+            html += `<div class="message-content">${escapeHtml(content)}</div>`;
+
+            if (toolUse) {
+                html += `<div class="tool-use">`;
+                html += `<div class="tool-use-header">Tool Used</div>`;
+                html += `<div class="tool-use-content">${escapeHtml(toolUse)}</div>`;
+                html += `</div>`;
+            }
+
+            div.innerHTML = html;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+            return div;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function fillSuggestion(text) {
+            document.getElementById('userInput').value = text;
+            document.getElementById('userInput').focus();
+        }
+
+        function setLoading(active) {
+            const sendBtn = document.getElementById('sendBtn');
+            const input = document.getElementById('userInput');
+            sendBtn.disabled = active;
+            input.disabled = active;
+            if (!active) input.focus();
+        }
+
+        // ---- Verbose Step Log ----
+        let _stepLogEl = null;
+
+        function beginStepLog() {
+            const container = document.getElementById('messages');
+            _stepLogEl = document.createElement('div');
+            _stepLogEl.className = 'step-log';
+            container.appendChild(_stepLogEl);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function logStep(text, status = 'active') {
+            if (!_stepLogEl) beginStepLog();
+            const prev = _stepLogEl.querySelector('.step-line.active');
+            if (prev) {
+                prev.classList.remove('active');
+                prev.classList.add('done');
+                prev.querySelector('.step-icon').textContent = 'OK';
+            }
+            const line = document.createElement('div');
+            line.className = `step-line ${status}`;
+            const icon = status === 'done' ? 'OK' : status === 'error' ? 'ERR' : '...';
+            line.innerHTML = `<span class="step-icon">${icon}</span> <span>${text}</span>`;
+            _stepLogEl.appendChild(line);
+            document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
+            return line;
+        }
+
+        function finishStepLog() {
+            if (_stepLogEl) {
+                const active = _stepLogEl.querySelector('.step-line.active');
+                if (active) {
+                    active.classList.remove('active');
+                    active.classList.add('done');
+                    active.querySelector('.step-icon').textContent = 'OK';
+                }
+            }
+            _stepLogEl = null;
+        }
+
+        // ---- Intent Detection ----
+        function detectIntent(message) {
+            const lower = message.toLowerCase();
+
+            // Form info / explanation (check BEFORE place_order to avoid "place an order" matching first)
+            if (lower.match(/\b(form.?type|what.*form|which.*form|explain.*form|what.*ways.*order|options)\b/))
+                return 'form_info';
+
+            // Info-seeking about specific form types or fields (BEFORE place_order to prevent false triggers)
+            // Catches: "tell me all info you need to fill out quick entry forms", "what fields for smart wizard?", etc.
+            if (lower.match(/\b(info|fields?|required|requirements?)\b.*\b(quick.?entry|smart.?wizard|classic.?entry|form|order)\b/) ||
+                lower.match(/\b(quick.?entry|smart.?wizard|classic.?entry)\b.*\b(info|fields?|required|requirements?)\b/) ||
+                lower.match(/\b(tell|what|which|how|show|list|explain|describe)\b.*\b(need|info|required|fields?|inputs?|parameters?)\b.*\b(form|entry|wizard|order|dispatch)\b/))
+                return 'form_info';
+
+            // Order placement intents
+            if (lower.match(/\b(dispatch|send\b.*driver|place.*(order|dispatch)|create.*(order|dispatch)|quick.*(entry|dispatch)|new.*order)\b/))
+                return 'place_order';
+            if (lower.match(/\b(wizard|step.by.step|guide|help.*plac)/))
+                return 'smart_wizard';
+            if (lower.match(/\b(block|multi.*driver|recurring|schedule.*block|weekly.*block)\b/))
+                return 'multi_driver_blocks';
+            if (lower.match(/\b(classic|assign.*my.*driver|own.*driver|fleet|our.*driver)\b/))
+                return 'classic_entry';
+
+            // Order management (use \b before keyword, allow plural 's' after)
+            if (lower.match(/\b(current|my|active|show|list)\b.*\borders?\b/))
+                return 'view_orders';
+            if (lower.match(/\bcancel\b.*\b(order|dispatch)\b/))
+                return 'cancel_order';
+            if (lower.match(/\border\b.*\b(detail|#|\d{3,})\b/))
+                return 'order_detail';
+
+            // Driver queries (allow plural)
+            if (lower.match(/\b(show|list|available|preferred|my)\b.*\bdrivers?\b/) || lower.match(/\bdrivers?\b.*\b(list|available)\b/))
+                return 'drivers';
+
+            // How to order (general info, not a placement)
+            if (lower.match(/\bhow.*(order|dispatch|place)\b/))
+                return 'form_info';
+
+            // Analysis / page viewing (legacy)
+            if (lower.match(/\b(analyze|screenshot|page|navigate|go.*to)\b/))
+                return 'legacy';
+
+            return 'chat';
+        }
+
+        // ---- Build System Prompt with Full Context ----
+        function buildSystemPrompt() {
+            let prompt = `You are a carrier dispatch assistant for Relay On Demand. You help carriers place orders and manage drivers through guided conversation.
+
+CONVERSATION FLOW (CRITICAL - FOLLOW THIS EXACTLY):
+You MUST gather information through conversation BEFORE submitting any order. Never rush to submit.
+
+Step 1: UNDERSTAND - Read what the user said carefully. Extract any info they provided (addresses, times, pay, driver names, trailer types, etc.)
+Step 2: IDENTIFY FORM TYPE - Based on their message, determine which form type fits:
+  - quick_entry: User wants a quick dispatch, just needs a driver sent somewhere
+  - smart_wizard: User has detailed requirements (destination, trailer, schedule, pay details)
+  - classic_entry: User wants to assign their own fleet driver
+Step 3: CHECK WHAT IS MISSING - For the chosen form type, check which required/important fields are still unknown:
+  - ALL forms need: pickup address (start_address)
+  - smart_wizard also needs: destination, pay preferences, schedule
+  - classic_entry also needs: driver name/ID, schedule date
+Step 4: ASK - Ask the user for ANY missing important information. Be specific about what you need.
+Step 5: SUMMARIZE & CONFIRM - Once you have enough info, show a summary of the order and ask "Should I submit this order?" Do NOT output ORDER_DATA yet.
+Step 6: SUBMIT - ONLY after the user confirms (says yes/confirm/submit/go/do it), output ORDER_DATA.
+
+IMPORTANT BEHAVIORS:
+- If the user provides a lot of info in one message (a dump of details), extract ALL relevant info from it and fill in as many fields as possible. Then ask about anything still missing.
+- If the user gives just a pickup address with no other details, ask about: destination (if any), when they need the driver, and pay preferences. Do NOT immediately submit with defaults.
+- If the user says "just use defaults" or "that is fine" or "go ahead" after you ask, THEN you may use defaults and submit.
+- If an order fails, tell the user what went wrong and ask what they want to do. Do NOT auto-retry.
+- If user asks about "recurring", "weekly", or "block" schedules, explain Multi-Driver Blocks and use API_ACTION: {"action": "view_multi_driver_blocks"}.
+- If user is asking what fields are needed (e.g., "what info do you need"), list the fields. Do NOT submit.
+
+OUTPUT FORMAT:
+1. To place an order: output ORDER_DATA: followed by a SINGLE-LINE flat JSON object. ALL values must be strings.
+2. To query data: output API_ACTION: followed by a SINGLE-LINE JSON object.
+3. NEVER include ORDER_DATA: in examples or explanations - the system executes ANY ORDER_DATA: line as a real order.
+4. Do NOT wrap JSON in markdown code blocks.
+
+REQUIRED FIELDS (every ORDER_DATA must have ALL 6):
+  1. start_address - Pickup address
+  2. destination_address - Drop-off ("" if none)
+  3. when_want_driver - "0"=scheduled date/time, "1"=timeframe, "2"=ASAP/unspecified
+  4. driver_pay_type - "0"=flat, "1"=hourly, "2"=per week, "3"=per load, "4"=per mile
+  5. driver_book_duration - Hours as string (e.g. "2")
+  6. form_type - "quick_entry" or "smart_wizard" or "classic_entry"
+
+PAY AMOUNT (include the ONE matching your driver_pay_type):
+  "0" -> flat_amount, "1" -> hourly_amount, "2" -> per_week_amount, "3" -> per_load_amount, "4" -> per_mile_amount
+
+DEFAULTS (use only when user says to use defaults or confirms): when_want_driver="2", driver_pay_type="0", flat_amount="0", driver_book_duration="2", form_type="quick_entry".
+
+FORM TYPE DETAILS:
+  quick_entry - Fast dispatch. User says "send a driver", "dispatch", "quick".
+  smart_wizard - Guided order with details. User provides destination, trailer, schedule, pay, etc.
+  classic_entry - Assign own fleet driver. REQUIRES: carrier_driver_id, carrier_driver_name, schedule_date (YYYY-MM-DD). NEVER submit without all three.
+
+OPTIONAL FIELDS:
+  trailer_type_id - "1"=FlatBed, "2"=Dry Van, "3"=Reefer, "4"=None/Power Only, "5"=BoxTruck, "6"=Container
+  schedule_time - "HH:mm" format (use with when_want_driver="0")
+  schedule_date - YYYY-MM-DD (for Classic Entry or scheduled orders)
+  carrier_driver_id, carrier_driver_name - For Classic Entry
+  truck_unit_number (max 10), trailer_number (max 15)
+  special_notes (max 500), internal_notes (max 200)
+  start_task_id, end_task_id - Task type IDs
+
+API ACTIONS (for viewing data, not placing orders):
+API_ACTION: {"action": "view_orders"}
+API_ACTION: {"action": "view_scheduled_orders"}
+API_ACTION: {"action": "view_drivers"}
+API_ACTION: {"action": "view_preferred_drivers"}
+API_ACTION: {"action": "view_quick_orders"}
+API_ACTION: {"action": "view_multi_driver_blocks"}
+API_ACTION: {"action": "view_order_detail", "params": {"order_id": "12345"}}
+API_ACTION: {"action": "cancel_order", "params": {"order_id": "12345", "reason": "Changed plans"}}
+API_ACTION: {"action": "view_dashboard"}
+API_ACTION: {"action": "estimate", "params": {"start_address": "...", "destination_address": "..."}}
+
+EXAMPLE CONVERSATION (showing how to guide the user):
+
+User: "I need to send a driver to 123 Main St"
+Assistant: "Got it! Pickup at 123 Main St. A few quick questions:
+1. Is there a destination/drop-off address, or just the pickup?
+2. When do you need the driver - ASAP or a specific date/time?
+3. Any pay preferences (flat rate, hourly, per mile)?
+If you just want a quick dispatch with defaults, say 'go ahead'."
+
+User: "No destination, ASAP, flat rate $150"
+Assistant: "Here is your order summary:
+- Pickup: 123 Main St
+- Destination: None
+- When: ASAP
+- Pay: Flat rate $150
+- Form: Quick Entry
+Should I submit this order?"
+
+User: "Yes"
+Assistant: "Submitting your order now.
+ORDER_DATA: {the json}"
+
+EXAMPLE - User dumps all info at once:
+User: "Send a reefer to 500 Harbor Blvd Long Beach to deliver to 200 Market St SF, schedule for tomorrow at 8am, pay $3/mile, 10 hour booking"
+Assistant: "Great, I have all the details. Here is your order summary:
+- Pickup: 500 Harbor Blvd, Long Beach
+- Destination: 200 Market St, SF
+- Schedule: Tomorrow at 08:00
+- Trailer: Reefer
+- Pay: $3.00/mile
+- Duration: 10 hours
+- Form: Smart Wizard
+Should I submit this?"
+
+User: "Yes"
+Assistant: "Submitting now.
+ORDER_DATA: {the json}"`;
+
+            // Add reference data if available
+            if (API_CONTEXT) {
+                if (API_CONTEXT.reference_data?.task_types) {
+                    const tasks = API_CONTEXT.reference_data.task_types.map(t =>
+                        `  ${t.DefaultParameterID}: ${t.ParameterName} (${t.TaskValue}h)`).join('\n');
+                    prompt += `\n\nTASK TYPES (use DefaultParameterID as start_task_id / end_task_id):\n${tasks}`;
+                }
+                if (API_CONTEXT.reference_data?.trailer_types) {
+                    const trailers = API_CONTEXT.reference_data.trailer_types.map(t =>
+                        `  ${t.TrailerTypeID}: ${t.TrailerTypeName}`).join('\n');
+                    prompt += `\n\nTRAILER TYPES (use TrailerTypeID as trailer_type_id):\n${trailers}`;
+                }
+                if (API_CONTEXT.reference_data?.endorsement_types) {
+                    const endorsements = API_CONTEXT.reference_data.endorsement_types.map(e =>
+                        `  ${e.EndorsementID}: ${e.EndorsementType}`).join('\n');
+                    prompt += `\n\nENDORSEMENT TYPES:\n${endorsements}`;
+                }
+                if (API_CONTEXT.carrier?.Data) {
+                    prompt += `\n\nCARRIER: ${API_CONTEXT.carrier.Data.CarrierName || 'N/A'}`;
+                }
+            }
+
+            return prompt;
+        }
+
+        // ---- Execute API Actions from LLM Response ----
+        async function executeAPIAction(action, params) {
+            switch (action) {
+                case 'view_orders':
+                    return await callAPI('/api/v2/orders?type=now');
+                case 'view_scheduled_orders':
+                    return await callAPI('/api/v2/orders?type=scheduled');
+                case 'view_all_orders':
+                    return await callAPI('/api/v2/orders?type=all');
+                case 'view_order_detail':
+                    return await callAPI(`/api/v2/orders/${params.order_id}`);
+                case 'cancel_order':
+                    return await callAPI(`/api/v2/orders/${params.order_id}/cancel`, 'POST', { reason: params.reason || '' });
+                case 'view_drivers':
+                    return await callAPI('/api/v2/drivers?type=own');
+                case 'view_preferred_drivers':
+                    return await callAPI('/api/v2/drivers?type=preferred');
+                case 'view_active_drivers':
+                    return await callAPI('/api/v2/drivers?type=active');
+                case 'view_quick_orders':
+                    return await callAPI('/api/v2/quick-orders');
+                case 'view_multi_driver_blocks':
+                    return await callAPI('/api/v2/multi-driver-blocks');
+                case 'estimate':
+                    return await callAPI('/api/v2/estimate', 'POST', params);
+                case 'view_dashboard':
+                    return await callAPI('/api/v2/dashboard');
+                default:
+                    return { success: false, error: `Unknown action: ${action}` };
+            }
+        }
+
+        // ---- Main Send Message ----
+        async function sendMessage() {
+            const input = document.getElementById('userInput');
+            const message = input.value.trim();
+
+            if (!message) return;
+            if (!isConnectedLM) {
+                alert('Please connect to AI Engine first');
+                return;
+            }
+
+            input.value = '';
+            setLoading(true);
+
+
+            try {
+                const res = await fetch('/api/predict', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: message })
+                });
+
+                const data = await res.json();
+
+                alert(`Prediction: ${data.prediction}\nConfidence: ${data.confidence}`);
+            } catch (err) {
+                alert('API Error: ' + err.message);
+            }
+
+
+            renderMessage('user', message);
+            CHAT_HISTORY.push({ role: 'user', content: message });
+
+            // Handle pending order confirmation/cancellation
+            if (PENDING_ORDER) {
+            
+                const lower = message.toLowerCase().trim();
+                
+                const isConfirm = /^(yes|confirm|submit|go|do it|place it|go ahead|send it|ok|okay|sure|proceed)[\s!.,]*$/i.test(lower);
+                const isCancel = /^(no|cancel|nevermind|stop|don't|dont|nah|nope)[\s!.,]*$/i.test(lower);
+
+                if (isConfirm) {
+                    beginStepLog();
+                    logStep('Submitting confirmed order...');
+                    try {
+                        const result = await callAPI('/api/v2/place-order', 'POST', PENDING_ORDER);
+                        if (result.success || result.Status) {
+                            logStep('Order placed successfully!', 'done');
+                            finishStepLog();
+                            const successMsg = 'Order submitted successfully!';
+                            renderMessage('assistant', successMsg, 'POST /api/v2/place-order');
+                            CHAT_HISTORY.push({ role: 'assistant', content: successMsg });
+                        } else {
+                            const userMsg = result.user_error || result.Message || result.error || 'Unknown error';
+                            logStep('Order failed: ' + userMsg, 'error');
+                            finishStepLog();
+                            const failMsg = 'Order submission failed: ' + userMsg + '\nWhat would you like to change?';
+                            renderMessage('assistant', failMsg);
+                            CHAT_HISTORY.push({ role: 'assistant', content: failMsg });
+                        }
+                    } catch (err) {
+                        finishStepLog();
+                        renderMessage('system', 'Error submitting order: ' + err.message);
+                    }
+                    PENDING_ORDER = null;
+                    setLoading(false);
+                    return;
+                } else if (isCancel) {
+                    PENDING_ORDER = null;
+                    const cancelMsg = 'Order cancelled. Let me know if you want to start over or need something else.';
+                    renderMessage('assistant', cancelMsg);
+                    CHAT_HISTORY.push({ role: 'assistant', content: cancelMsg });
+                    setLoading(false);
+                    return;
+                } else {
+                    // User wants to modify something - clear pending order and let LLM handle it
+                    // Add the pending order context to chat history so LLM knows what to modify
+                    CHAT_HISTORY.push({
+                        role: 'system',
+                        content: 'The user wants to modify the pending order. Previous order data: ' + JSON.stringify(PENDING_ORDER) + '. Apply the user\'s requested changes and show an updated order summary. Do NOT output ORDER_DATA yet - show the updated summary and ask for confirmation again.'
+                    });
+                    PENDING_ORDER = null;
+                    // Fall through to normal LLM handling below
+                }
+            }
+
+            beginStepLog();
+
+            try {
+                const intent = detectIntent(message);
+                logStep(`Intent: ${intent}`);
+
+                // Load context if we don't have it yet
+                if (!API_CONTEXT && isConnectedAPI) {
+                    logStep('Loading Relay API context...');
+                    try {
+                        const resp = await fetch('/api/v2/context');
+                        if (resp.ok) {
+                            API_CONTEXT = await resp.json();
+                            logStep('API context loaded', 'done');
+                        }
+                    } catch (e) {
+                        logStep('Could not load API context', 'error');
+                    }
+                }
+
+                // Handle direct intents that don't need LLM
+                if (intent === 'view_orders') {
+                    logStep('Fetching current orders...');
+                    const orders = await callAPI('/api/v2/orders?type=now');
+                    finishStepLog();
+                    const orderText = formatOrderResponse(orders);
+                    renderMessage('assistant', orderText, 'API: GET /api/v2/orders');
+                    CHAT_HISTORY.push({ role: 'assistant', content: orderText });
+                    setLoading(false);
+                    return;
+                }
+
+                if (intent === 'drivers') {
+                    logStep('Fetching drivers...');
+                    const drivers = await callAPI('/api/v2/drivers?type=own');
+                    finishStepLog();
+                    const driverText = formatDriverResponse(drivers);
+                    renderMessage('assistant', driverText, 'API: GET /api/v2/drivers');
+                    CHAT_HISTORY.push({ role: 'assistant', content: driverText });
+                    setLoading(false);
+                    return;
+                }
+
+                if (intent === 'form_info') {
+                    finishStepLog();
+                    const formText = formatFormTypes(message);
+                    renderMessage('assistant', formText);
+                    CHAT_HISTORY.push({ role: 'assistant', content: formText });
+                    setLoading(false);
+                    return;
+                }
+
+                // For all other intents, use the LLM with streaming
+                const systemPrompt = buildSystemPrompt();
+
+                // Create message bubble for streaming
+                const container = document.getElementById('messages');
+                const msgDiv = document.createElement('div');
+                msgDiv.className = 'message assistant';
+                msgDiv.innerHTML = `<div class="message-header">ASSISTANT</div><div class="message-content"></div>`;
+                container.appendChild(msgDiv);
+                const contentEl = msgDiv.querySelector('.message-content');
+                contentEl.textContent = '';
+                contentEl.style.opacity = '1';
+
+                logStep('Streaming response from AI...');
+                let response = '';
+                try {
+                    response = await callLLMStream([
+                        { role: 'system', content: systemPrompt },
+                        ...CHAT_HISTORY.slice(-14)
+                    ], contentEl);
+                } catch (streamErr) {
+                    logStep('Stream failed, trying non-stream...', 'error');
+                    try {
+                        const fallbackResp = await fetch('/api/automation/chat', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                messages: [
+                                    { role: 'system', content: systemPrompt },
+                                    ...CHAT_HISTORY.slice(-14)
+                                ],
+                                temperature: 0.3,
+                                max_tokens: 16000
+                            })
+                        });
+                        const data = await fallbackResp.json();
+                        response = data.choices?.[0]?.message?.content || 'No response';
+                        if (response.includes('<think>') && response.includes('</think>')) {
+                            response = response.split('</think>').pop().trim();
+                        }
+                        contentEl.textContent = response;
+                    } catch (e2) {
+                        contentEl.textContent = 'Error getting response. Please try again.';
+                        response = contentEl.textContent;
+                    }
+                }
+
+                // Check for ORDER_DATA command from LLM (colon optional, may have space)
+                const orderMatch = response.match(/ORDER_DATA:?\s*(\{[^}]*\})/);
+                if (orderMatch) {
+                    try {
+                        const rawJson = orderMatch[1].replace(/[\r\n]+/g, ' ').trim();
+                        const orderData = JSON.parse(rawJson);
+
+                        // Fill missing required defaults (model sometimes drops these)
+                        const defaults = {
+                            when_want_driver: (orderData.schedule_date || orderData.schedule_time) ? "0" : "2",
+                            driver_pay_type: "0",
+                            driver_book_duration: "2",
+                            form_type: "quick_entry",
+                            destination_address: ""
+                        };
+                        for (const [key, val] of Object.entries(defaults)) {
+                            if (!(key in orderData)) {
+                                orderData[key] = val;
+                            }
+                        }
+                        // Fill default pay amount if missing or empty
+                        const payMap = {"0": "flat_amount", "1": "hourly_amount", "2": "per_week_amount", "3": "per_load_amount", "4": "per_mile_amount"};
+                        const payField = payMap[orderData.driver_pay_type];
+                        if (payField && !orderData[payField]?.trim()) {
+                            orderData[payField] = "0";
+                        }
+
+                        // Validate: classic_entry requires a real driver ID
+                        if (orderData.form_type === 'classic_entry' && !orderData.carrier_driver_id?.trim()) {
+                            logStep('Classic entry needs a driver - asking user...', 'error');
+                            finishStepLog();
+                            const driverResp = await callAPI('/api/v2/drivers?type=own');
+                            const drivers = driverResp?.Data || [];
+                            let driverList = 'To use Classic Entry, I need to know which driver to assign. ';
+                            if (drivers.length > 0) {
+                                driverList += 'Here are your drivers:\n\n';
+                                drivers.forEach((d, i) => {
+                                    driverList += `${i+1}. ${d.FirstName || ''} ${d.LastName || ''} (ID: ${d.CarrierDriverID})\n`;
+                                });
+                                driverList += '\nPlease tell me which driver to assign (name or ID).';
+                            } else {
+                                driverList += 'However, no fleet drivers were found on your account. You may want to use Quick Entry instead.';
+                            }
+                            contentEl.textContent = driverList;
+                            CHAT_HISTORY.push({ role: 'assistant', content: driverList });
+                            setLoading(false);
+                            return;
+                        }
+
+                        // Validate: classic_entry requires a schedule_date
+                        if (orderData.form_type === 'classic_entry' && !orderData.schedule_date?.trim()) {
+                            const today = new Date();
+                            orderData.schedule_date = today.toISOString().split('T')[0];
+                            orderData.when_want_driver = "0";
+                        }
+
+                        // Validate: must have a pickup address
+                        if (!orderData.start_address?.trim()) {
+                            logStep('Missing pickup address', 'error');
+                            finishStepLog();
+                            contentEl.textContent = 'I need a pickup address to place the order. Where should the driver go?';
+                            CHAT_HISTORY.push({ role: 'assistant', content: contentEl.textContent });
+                            setLoading(false);
+                            return;
+                        }
+
+                        // CONFIRMATION GATE: Store pending order and show review
+                        PENDING_ORDER = orderData;
+                        logStep('Order ready - waiting for confirmation', 'done');
+
+                        const formTypeLabels = { quick_entry: 'Quick Entry', smart_wizard: 'Smart Wizard', classic_entry: 'Classic Entry' };
+                        const payTypeLabels = { "0": 'Flat', "1": 'Hourly', "2": 'Per Week', "3": 'Per Load', "4": 'Per Mile' };
+                        const whenLabels = { "0": 'Scheduled', "1": 'Timeframe', "2": 'ASAP' };
+                        const trailerLabels = { "1": 'FlatBed', "2": 'Dry Van', "3": 'Reefer', "4": 'Power Only', "5": 'BoxTruck', "6": 'Container' };
+
+                        const payAmt = orderData[payField] || '0';
+                        const cleanResponse = response.replace(/ORDER_DATA:?\s*\{[^}]*\}/, '').trim();
+
+                        let reviewText = cleanResponse ? cleanResponse + '\n\n' : '';
+                        reviewText += '--- ORDER REVIEW ---\n';
+                        reviewText += `Pickup: ${orderData.start_address}\n`;
+                        if (orderData.destination_address) reviewText += `Destination: ${orderData.destination_address}\n`;
+                        reviewText += `When: ${whenLabels[orderData.when_want_driver] || orderData.when_want_driver}\n`;
+                        if (orderData.schedule_date) reviewText += `Date: ${orderData.schedule_date}\n`;
+                        if (orderData.schedule_time) reviewText += `Time: ${orderData.schedule_time}\n`;
+                        reviewText += `Pay: ${payTypeLabels[orderData.driver_pay_type] || 'Flat'} $${payAmt}\n`;
+                        reviewText += `Duration: ${orderData.driver_book_duration || '2'} hours\n`;
+                        reviewText += `Form: ${formTypeLabels[orderData.form_type] || orderData.form_type}\n`;
+                        if (orderData.trailer_type_id) reviewText += `Trailer: ${trailerLabels[orderData.trailer_type_id] || orderData.trailer_type_id}\n`;
+                        if (orderData.carrier_driver_name) reviewText += `Driver: ${orderData.carrier_driver_name}\n`;
+                        if (orderData.special_notes) reviewText += `Notes: ${orderData.special_notes}\n`;
+                        reviewText += '--------------------\n';
+                        reviewText += 'Type "confirm" or "submit" to place this order, or tell me what to change.';
+
+                        contentEl.textContent = reviewText;
+                        CHAT_HISTORY.push({ role: 'assistant', content: reviewText });
+                    } catch (parseErr) {
+                        logStep('Failed to parse order data from LLM response', 'error');
+                    }
+                }
+
+                // Check for API_ACTION command from LLM (colon optional)
+                const actionMatch = response.match(/API_ACTION:?\s*(\{[^}]*(?:\{[^}]*\}[^}]*)?\})/);
+                if (actionMatch) {
+                    try {
+                        const rawAction = actionMatch[1].replace(/[\r\n]+/g, ' ').trim();
+                        const actionData = JSON.parse(rawAction);
+                        logStep(`Executing: ${actionData.action}...`);
+                        const result = await executeAPIAction(actionData.action, actionData.params || {});
+                        logStep(`${actionData.action} completed`, 'done');
+
+                        // Format and append result
+                        const resultText = formatAPIResult(actionData.action, result);
+                        const strippedText = response.replace(/API_ACTION:?\s*\{[^}]*(?:\{[^}]*\}[^}]*)?\}/, '').trim();
+                        const actionLabels = {
+                            view_dashboard: 'Here is your dashboard overview:',
+                            view_orders: 'Here are your current orders:',
+                            view_scheduled_orders: 'Here are your scheduled orders:',
+                            view_drivers: 'Here are your drivers:',
+                            view_preferred_drivers: 'Here are your preferred drivers:',
+                            view_quick_orders: 'Here are your quick order templates:',
+                            view_multi_driver_blocks: 'Here are your multi-driver blocks:',
+                            view_order_detail: 'Here are the order details:',
+                            estimate: 'Here is the distance/cost estimate:'
+                        };
+                        const prefix = strippedText || actionLabels[actionData.action] || 'Here are the results:';
+                        contentEl.textContent = prefix + '\n\n' + resultText;
+
+                        const toolDiv = document.createElement('div');
+                        toolDiv.className = 'tool-use';
+                        toolDiv.innerHTML = `<div class="tool-use-header">API Call</div><div class="tool-use-content">${actionData.action}</div>`;
+                        msgDiv.appendChild(toolDiv);
+                    } catch (actionErr) {
+                        logStep('Failed to execute API action', 'error');
+                    }
+                }
+
+                finishStepLog();
+                container.scrollTop = container.scrollHeight;
+                CHAT_HISTORY.push({ role: 'assistant', content: response });
+
+            } catch (error) {
+                finishStepLog();
+                renderMessage('system', `Error: ${error.message}`);
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        // ---- Response Formatters ----
+
+        function formatOrderResponse(data) {
+            if (!data || !data.Data) return 'No orders found.';
+            const orders = Array.isArray(data.Data) ? data.Data : [data.Data];
+            if (orders.length === 0) return 'No active orders found.';
+
+            let text = `Current Orders (${orders.length}):\n\n`;
+            orders.forEach((o, i) => {
+                text += `${i + 1}. Order #${o.OrderNumber || o.OrderID || 'N/A'}\n`;
+                text += `   Status: ${o.OrderStatusText || o.OrderStatus || 'N/A'}\n`;
+                text += `   From: ${o.StartAddress || 'N/A'}\n`;
+                text += `   To: ${o.DestinationAddress || 'N/A'}\n`;
+                if (o.DriverName) text += `   Driver: ${o.DriverName}\n`;
+                text += '\n';
+            });
+            return text;
+        }
+
+        function formatDriverResponse(data) {
+            if (!data || !data.Data) return 'No drivers found.';
+            const drivers = Array.isArray(data.Data) ? data.Data : [data.Data];
+            if (drivers.length === 0) return 'No drivers found.';
+
+            let text = `Carrier Drivers (${drivers.length}):\n\n`;
+            drivers.forEach((d, i) => {
+                text += `${i + 1}. ${d.FirstName || ''} ${d.LastName || ''} (ID: ${d.CarrierDriverID})\n`;
+                text += `   Phone: ${d.Phone || 'N/A'} | Status: ${d.Status ? 'Active' : 'Inactive'}\n`;
+                text += `   Location: ${d.City || 'N/A'}, ${d.StateName || 'N/A'}\n\n`;
+            });
+            return text;
+        }
+
+        function formatFormTypes(userMessage) {
+            const lower = (userMessage || '').toLowerCase();
+
+            // Detect if user is asking about a specific form type
+            if (lower.match(/\bquick.?entry\b/)) {
+                return `QUICK ENTRY - Field Details:
+
+REQUIRED (you must provide):
+  1. Pickup Address - Where the driver should go
+
+OPTIONAL (defaults applied if not specified):
+  2. Destination Address - Drop-off location (default: none)
+  3. Driver Pay Type - flat / hourly / per week / per load / per mile (default: flat rate)
+  4. Pay Amount - Dollar amount for the selected pay type (default: $0)
+  5. Driver Book Duration - How many hours needed (default: 2 hours)
+  6. Trailer Type - FlatBed / Dry Van / Reefer / Power Only / BoxTruck / Container
+  7. Truck Unit Number - Max 10 characters
+  8. Trailer Number - Max 15 characters
+  9. Special Notes - Instructions for the driver, max 500 characters
+  10. Internal Notes - Internal reference notes, max 200 characters
+  11. Pickup Task Type - What to do at pickup (e.g., Live Load, Drop Trailer)
+  12. Destination Task Type - What to do at destination
+
+Examples:
+  "Quick dispatch to 123 Main St, flat rate $150"
+  "Send a driver to 456 Oak Ave, hourly $35 for 4 hours, dry van"
+  "Dispatch to 789 Pine St, per mile $2.50, reefer trailer, 8 hours"`;
+            }
+
+            if (lower.match(/\bsmart.?wizard\b/)) {
+                return `SMART WIZARD - Field Details:
+
+REQUIRED (you must provide):
+  1. Pickup Address - Where the driver should go
+
+OPTIONAL (defaults applied if not specified):
+  2. Destination Address - Drop-off location
+  3. Driver Pay Type - flat / hourly / per week / per load / per mile (default: flat rate)
+  4. Pay Amount - Dollar amount for the selected pay type
+  5. Driver Book Duration - How many hours needed (default: 2 hours)
+  6. Schedule Date - When to schedule the dispatch
+  7. Schedule Time - Exact time in HH:mm format
+  8. Trailer Type - FlatBed / Dry Van / Reefer / Power Only / BoxTruck / Container
+  9. Pickup Task Type - What to do at pickup (e.g., Live Load, Drop Trailer)
+  10. Destination Task Type - What to do at destination
+  11. Truck Unit Number - Max 10 characters
+  12. Trailer Number - Max 15 characters
+  13. Special Notes - Instructions for the driver, max 500 characters
+  14. Internal Notes - Internal reference notes, max 200 characters
+  15. Endorsement Types - HAZMAT, Tanker, Doubles/Triples, etc.
+
+If you provide all details in one message, the order is placed immediately.
+If details are missing, I'll guide you step by step.
+
+Examples:
+  "Help me place an order from NYC to Boston, reefer trailer, per mile $2.50"
+  "Guide me through placing an order step by step"`;
+            }
+
+            if (lower.match(/\bclassic.?entry\b/)) {
+                return `CLASSIC ENTRY - Field Details:
+
+REQUIRED (you must provide):
+  1. Pickup Address - Where the driver should go
+  2. Driver Name or ID - Which of YOUR fleet drivers to assign
+
+OPTIONAL (defaults applied if not specified):
+  3. Destination Address - Drop-off location
+  4. Driver Pay Type - flat / hourly / per week / per load / per mile (default: flat rate)
+  5. Pay Amount - Dollar amount for the selected pay type
+  6. Driver Book Duration - How many hours needed (default: 2 hours)
+  7. Schedule Date - When to schedule the dispatch
+  8. Schedule Time - Exact time in HH:mm format
+  9. Trailer Type - FlatBed / Dry Van / Reefer / Power Only / BoxTruck / Container
+  10. Truck Unit Number - Max 10 characters
+  11. Trailer Number - Max 15 characters
+  12. Special Notes - Instructions for the driver, max 500 characters
+  13. Internal Notes - Internal reference notes, max 200 characters
+
+Examples:
+  "Assign my driver John Smith to 123 Main St"
+  "Classic entry, driver ID 3408, pickup at 456 Oak Ave, flat $200"`;
+            }
+
+            if (lower.match(/\b(multi.?driver|block|recurring)\b/)) {
+                return `MULTI-DRIVER BLOCKS - Details:
+
+Orders are created from pre-scheduled driver time blocks.
+
+How to use:
+  1. View your existing blocks: "Show my driver blocks"
+  2. Create an order from a block: "Create order from block #123"
+
+Blocks are set up in the Relay On Demand system for recurring/regular schedules.
+Each block already has driver, schedule, and route information pre-configured.
+
+Examples:
+  "Show my driver blocks"
+  "Create order from block #123"`;
+            }
+
+            // General overview (no specific form type detected)
+            return `Available Form Types:
+
+1. QUICK ENTRY
+   Fastest way to place an order. Minimal required fields.
+   Best for: Simple dispatches where you know the basics.
+   Example: "Quick dispatch to 123 Main St, flat rate $150"
+
+2. SMART WIZARD
+   Guided step-by-step order placement.
+   Best for: Complex orders or if you need help filling details.
+   Example: "Help me place an order step by step"
+
+3. MULTI-DRIVER BLOCKS
+   Pre-scheduled driver blocks for recurring dispatches.
+   Best for: Regular/recurring schedules.
+   Example: "Show my driver blocks" or "Create order from block #123"
+
+4. CLASSIC ENTRY
+   Assign to your own fleet driver by name/ID.
+   Best for: When you know exactly which of YOUR drivers to send.
+   Example: "Assign to my driver John Smith"
+
+Just describe what you need and I'll use the right form type automatically!
+For detailed field info, ask about a specific form type (e.g., "What info do I need for Quick Entry?")`;
+        }
+
+        function formatAPIResult(action, data) {
+            if (action.startsWith('view_order') && !action.includes('detail')) {
+                return formatOrderResponse(data);
+            }
+            if (action.includes('driver')) {
+                return formatDriverResponse(data);
+            }
+            if (action === 'view_dashboard') {
+                return `Dashboard:\n${JSON.stringify(data, null, 2)}`;
+            }
+            // Generic
+            return JSON.stringify(data, null, 2);
+        }
+    </script>
+</body>
+</html>
