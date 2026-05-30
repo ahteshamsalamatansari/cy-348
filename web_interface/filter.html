@@ -568,7 +568,7 @@ GET /filter-docs          — Full documentation page</pre>
             const userIdVal = document.getElementById('userIdInput').value.trim() || 'anonymous';
 
             try {
-                const res = await fetch('http://localhost:9900/clear_history', {
+                const res = await fetch('http://localhost:9901/clear_history', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ user_id: userIdVal })

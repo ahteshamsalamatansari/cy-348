@@ -33,7 +33,7 @@ def start_services():
     # Define the servers to start using absolute paths
     # Order: Model -> API -> Chat
     servers = [
-        {"name": "Filter Model", "cmd": [python_exe, os.path.join(base_dir, "runs.py")], "port": 9900},
+        {"name": "Filter Model", "cmd": [python_exe, os.path.join(base_dir, "runs.py")], "port": 9901},
         {"name": "Automation API", "cmd": [python_exe, os.path.join(base_dir, "api_server.py")], "port": 9500},
         {"name": "Chat Server", "cmd": [python_exe, os.path.join(base_dir, "chat_server.py")], "port": 9800}
     ]
@@ -62,7 +62,7 @@ def start_services():
 
     print("\n" + "=" * 60)
     print("  SUCCESS: All services are running in this terminal!")
-    print("  - Filter: http://localhost:9900")
+    print("  - Filter: http://localhost:9901")
     print("  - API:    http://localhost:9500")
     print("  - Chat:   http://localhost:9800")
     print("\n  Press Ctrl+C to STOP all services.")

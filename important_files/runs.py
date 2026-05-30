@@ -220,4 +220,4 @@ def clear_history():
 # RUN SERVER
 # -----------------------------
 if __name__ == '__main__':
-    app.run(host="0.0.0.0", port=9900, debug=True)
+    app.run(host="0.0.0.0", port=9901, debug=True)

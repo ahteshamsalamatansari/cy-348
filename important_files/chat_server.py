@@ -390,7 +390,7 @@ def api_predict():
         data = request.get_json()
 
         resp = requests.post(
-            "http://localhost:9900/predict",  # 👈 call your model server
+            "http://localhost:9901/predict",  # 👈 call your model server
             json=data,
             timeout=10
         )
@@ -638,11 +638,11 @@ def filter_message():
         raw_uid = data.get('user_id') or data.get('username')
         user_id = (str(raw_uid).strip() if raw_uid else '') or 'anonymous'
 
-        # Proxy to local model server (runs.py) on port 9900
+        # Proxy to local model server (runs.py) on port 9901
         # runs.py handles history automatically if we pass user_id
         try:
             resp = requests.post(
-                "http://localhost:9900/predict",
+                "http://localhost:9901/predict",
                 json={"text": message, "user_id": user_id},
                 timeout=15
             )
@@ -708,8 +708,8 @@ def filter_clear():
 def filter_health():
     """Quick health check for the filter API (checks local model server)"""
     try:
-        # Check the local model server (runs.py) on port 9900
-        resp = requests.get("http://localhost:9900/", timeout=5)
+        # Check the local model server (runs.py) on port 9901
+        resp = requests.get("http://localhost:9901/", timeout=5)
         if resp.ok:
             return jsonify({
                 "status": "ok", 
@@ -718,7 +718,7 @@ def filter_health():
             })
         return jsonify({
             "status": "degraded", 
-            "reason": "Local model server (runs.py) not responding on port 9900"
+            "reason": "Local model server (runs.py) not responding on port 9901"
         }), 503
     except Exception as e:
         return jsonify({
